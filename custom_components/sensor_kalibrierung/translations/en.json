@@ -1,0 +1,107 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "Sensor calibration is already set up."
+    },
+    "step": {
+      "user": {
+        "title": "Zigbee2MQTT Sensor-Kalibrierung",
+        "description": "Calibrates sensors lying side by side. Use the card custom:sensor-kalibrierung-card.",
+        "data": {
+          "base_topic": "Zigbee2MQTT base topic"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Settings",
+        "data": {
+          "measure_hours": "Measuring time",
+          "verify_hours": "Verification time",
+          "settle_max_hours": "Longest settling time",
+          "max_temperature_offset": "Largest automatic temperature correction",
+          "max_humidity_offset": "Largest automatic humidity correction",
+          "max_pressure_offset": "Largest automatic pressure correction",
+          "notify_targets": "Notifications to",
+          "base_topic": "Zigbee2MQTT base topic"
+        },
+        "data_description": {
+          "max_temperature_offset": "Larger deviations are only reported.",
+          "measure_hours": "Applies to the normal calibration. Quick calibration always measures 2 hours.",
+          "notify_targets": "Reports the end of a run and sensors that stop reporting."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "idle": "Ready",
+          "preparing": "Checking",
+          "settling": "Settling",
+          "measuring": "Measuring",
+          "applying": "Correcting",
+          "verifying": "Verifying",
+          "done": "Done",
+          "failed": "Failed",
+          "cancelled": "Cancelled"
+        },
+        "state_attributes": {
+          "last_outcome": {
+            "name": "Last run"
+          },
+          "last_finished": {
+            "name": "Last run finished"
+          },
+          "last_mode": {
+            "name": "Last run mode"
+          },
+          "last_corrected": {
+            "name": "Last corrected"
+          },
+          "last_warnings": {
+            "name": "Notes"
+          },
+          "offsets_missing": {
+            "name": "Offsets missing"
+          },
+          "new_sensors": {
+            "name": "New sensors"
+          },
+          "silent": {
+            "name": "Not reporting"
+          },
+          "mode": {
+            "name": "Mode"
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "start": {
+      "name": "Start calibration",
+      "description": "Starts a run with the current selection."
+    },
+    "cancel": {
+      "name": "Cancel calibration",
+      "description": "Cancels the run, offsets stay unchanged."
+    },
+    "dismiss": {
+      "name": "Close result",
+      "description": "Closes the result view."
+    },
+    "rollback": {
+      "name": "Undo",
+      "description": "Restores offsets and precision from before the last run."
+    },
+    "restore_offsets": {
+      "name": "Restore offsets",
+      "description": "Writes the stored offsets again when they are missing or differ in Zigbee2MQTT, for example after a sensor was reset."
+    }
+  }
+}
