@@ -91,6 +91,13 @@ Existing offsets stay active while measuring. The new offset is the old offset p
 - **Silent sensors:** sensors with more than 2 hours without a report while measuring are not corrected. A sensor that is silent for 90 minutes holds up settling and triggers a notification.
 - **Sensors outside Zigbee2MQTT:** comparison or reference only.
 
+## Limits
+
+- **Matching, not absolute accuracy:** the sensors are matched to each other, or to the reference. If all of them are off in the same direction, they stay off together. Use a trustworthy sensor as reference if absolute values matter.
+- **Offset only:** Zigbee2MQTT applies a fixed offset. It corrects how far a sensor is off at the calibration point, not errors that grow further away from it. Indoors, roughly 18 to 25 °C and 40 to 65 %, this hardly matters.
+- **Outdoor sensors:** calibrate them indoors before mounting. In frost or above about 85 % humidity, deviations of a few percent humidity remain possible, and after fog or dew many sensors stay near 100 % for a while.
+- **Mounting matters more:** sun, a warm wall or the air under the eaves easily shift outdoor readings by several degrees. A ventilated radiation shield helps more than any calibration.
+
 ## Services and status sensor
 
 `sensor_kalibrierung.start`, `.cancel`, `.dismiss`, `.rollback` and `.restore_offsets`
