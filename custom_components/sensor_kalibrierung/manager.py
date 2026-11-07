@@ -1178,10 +1178,20 @@ class CalibrationManager:
             live[key] = {item: round(data.deviation, 2) for item, data in stats.items()}
         self._live = live
 
+    def _all_reported(self, run: dict[str, Any]) -> bool:
+        """True, wenn jeder aktive Sensor mindestens einen Wert geschickt hat."""
+        return all(
+            run["samples"].get(entity_id)
+            for member in self._active(run)
+            for entity_id in member["entities"].values()
+        )
+
     def _eta(self, run: dict[str, Any]) -> float | None:
         """Schätzt, wann die aktuelle Phase endet."""
         phase = run["phase"]
         if phase == PHASE_PREPARING:
+            if self._all_reported(run):
+                return None
             return run["prepared_at"] + PREPARE_TIMEOUT_SECONDS
         if phase == PHASE_SETTLING:
             return run["phase_started_at"] + run["settle_min_seconds"]
@@ -1201,7 +1211,10 @@ class CalibrationManager:
                 for member in active
                 if all(run["samples"].get(e) for e in member["entities"].values())
             )
-            return f"{ready} von {len(active)} Sensoren haben sich gemeldet."
+            text = f"{ready} von {len(active)} Sensoren haben sich gemeldet."
+            if ready == len(active):
+                text += " In wenigen Minuten geht es weiter."
+            return text
         if phase == PHASE_SETTLING:
             stable = len(active) - len(run["unstable"])
             text = f"{stable} von {len(active)} Sensoren sind stabil."

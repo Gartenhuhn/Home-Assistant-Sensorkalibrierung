@@ -1,5 +1,13 @@
 # Änderungen
 
+## 1.1.4
+
+- Während des Laufs stehen die Referenzen in einem eigenen Abschnitt „Referenzen, bleiben unverändert“, mit grauen Balken.
+- Die Überschrift sagt jetzt „Abweichung vom Mittel der Referenzen“ beziehungsweise „vom Mittel der Gruppe“.
+- Statt „wartet“ steht bis zum ersten Wert ein Hinweis, dass die Werte in wenigen Minuten erscheinen.
+- Beim Prüfen keine irreführende Restzeit mehr, sobald sich alle Sensoren gemeldet haben.
+- Die Streuung in der Fußzeile sagt dazu, wenn sie ohne Referenzen gerechnet ist.
+
 ## 1.1.3
 
 - Referenzen lassen sich direkt unter „Referenz“ wählen. Die Liste zeigt alle kalibrierten Sensoren, ein Haken wählt den Sensor automatisch mit aus.

@@ -100,9 +100,9 @@ const HELP = [
       ["Offsets geändert", "Die Offsets wurden außerhalb der Kalibrierung geändert, etwa von Hand in Zigbee2MQTT. Zurückschreiben nur, wenn das nicht Absicht war."],
       ["Blauer Balken", "Abweichung des Sensors vom Mittel oder von der Referenz. Blau heißt stabil."],
       ["Oranger Balken", "Der Abstand ändert sich noch. Der Sensor gleicht sich noch an die Umgebung an, das ist am Anfang normal."],
-      ["wartet", "Der Sensor hat noch zu wenige Werte geschickt."],
+      ["–", "Für diesen Sensor gibt es noch keinen Wert. Die Kachel rechnet alle 5 Minuten neu."],
       ["still … Min.", "Der Sensor meldet sich nicht mehr. Die Kalibrierung wartet auf ihn. Kurz die Taste am Sensor drücken oder näher an einen Router legen."],
-      ["◆", "Referenzsensor, wird nicht verändert."],
+      ["Graue Balken", "Referenzsensoren. Sie bleiben unverändert und zeigen nur, wie weit sie untereinander auseinanderliegen."],
       ["Streuung", "Abstand zwischen dem höchsten und dem niedrigsten Sensor. Nach der Kalibrierung soll sie klein sein."],
       ["Grafik im Ergebnis", "Ring: Abweichung vorher. Punkt: Abweichung nachher. Je näher der Punkt an der 0, desto besser."],
     ],
@@ -223,6 +223,8 @@ const STYLES = `
   .track::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--divider-color); }
   .bar { position: absolute; top: 0; height: 8px; background: var(--primary-color); }
   .bar.warn { background: var(--warning-color); }
+  .bar.ref { background: color-mix(in srgb, var(--secondary-text-color) 55%, transparent); }
+  .label.sublabel { margin-top: 14px; }
   .value { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .muted { color: var(--secondary-text-color); }
   .warn-text { color: var(--warning-color); }
@@ -803,25 +805,41 @@ class SensorKalibrierungCard extends HTMLElement {
       QUANTITIES[key].scale,
       ...values.map(({ data }) => Math.abs(data.deviation ?? 0)),
     );
-    return `<div class="bars">${values
-      .map(({ row, data }) => {
-        const name = `<span class="name" title="${escapeHtml(row.name)}">${row.reference ? "◆ " : ""}${escapeHtml(row.name)}</span>`;
-        if (row.silent_minutes) {
-          return `${name}<div class="track"></div><span class="value silent" title="Keine Meldung seit ${row.silent_minutes} Minuten">still ${row.silent_minutes} Min.</span>`;
-        }
-        if (data.deviation === null || data.deviation === undefined) {
-          return `${name}<div class="track"></div><span class="value muted">wartet</span>`;
-        }
-        const width = (Math.abs(data.deviation) / limit) * 50;
-        const side =
-          data.deviation >= 0
-            ? `left: 50%; width: ${width}%; border-radius: 0 3px 3px 0;`
-            : `right: 50%; width: ${width}%; border-radius: 3px 0 0 3px;`;
-        return `${name}<div class="track"><div class="bar ${row.unstable ? "warn" : ""}" style="${side}"></div></div>
-          <span class="value">${signed(data.deviation)} ${unit}</span>`;
-      })
-      .join("")}</div>`;
+    const anyValue = values.some(
+      ({ data }) => data.deviation !== null && data.deviation !== undefined,
+    );
+    const references = values.filter(({ row }) => row.reference);
+    const line = ({ row, data }) => {
+      const name = `<span class="name" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>`;
+      if (row.silent_minutes) {
+        return `${name}<div class="track"></div><span class="value silent" title="Keine Meldung seit ${row.silent_minutes} Minuten">still ${row.silent_minutes} Min.</span>`;
+      }
+      if (row.reference && references.length === 1) {
+        return `${name}<div class="track"></div><span class="value muted">Bezug</span>`;
+      }
+      if (data.deviation === null || data.deviation === undefined) {
+        return `${name}<div class="track"></div><span class="value muted" title="Noch kein Wert">–</span>`;
+      }
+      const width = (Math.abs(data.deviation) / limit) * 50;
+      const side =
+        data.deviation >= 0
+          ? `left: 50%; width: ${width}%; border-radius: 0 3px 3px 0;`
+          : `right: 50%; width: ${width}%; border-radius: 3px 0 0 3px;`;
+      const kind = row.reference ? "ref" : row.unstable ? "warn" : "";
+      return `${name}<div class="track"><div class="bar ${kind}" style="${side}"></div></div>
+        <span class="value">${signed(data.deviation)} ${unit}</span>`;
+    };
+    const measured = values.filter(({ row }) => !row.reference);
+    const waiting = anyValue
+      ? ""
+      : `<p class="hint">Die ersten Werte erscheinen in wenigen Minuten.</p>`;
+    const refBlock = references.length
+      ? `<p class="label sublabel">${references.length === 1 ? "Referenz, bleibt unverändert" : "Referenzen, bleiben unverändert"}</p>
+        <div class="bars">${references.map(line).join("")}</div>`
+      : "";
+    return `${waiting}<div class="bars">${measured.map(line).join("")}</div>${refBlock}`;
   }
+
 
   _running(state) {
     const keys = Object.keys(QUANTITIES).filter((key) =>
@@ -832,17 +850,23 @@ class SensorKalibrierungCard extends HTMLElement {
     const spread = state.spread?.[key];
     const count = state.sensors.filter((row) => row.active).length;
     const eta = remaining(state.eta);
+    const refCount = state.sensors.filter((row) => row.active && row.reference).length;
+    const label = !refCount
+      ? "Abweichung vom Mittel der Gruppe"
+      : refCount === 1
+        ? "Abweichung von der Referenz"
+        : "Abweichung vom Mittel der Referenzen";
     const info =
       spread === null || spread === undefined
         ? `${count} Sensoren`
-        : `Streuung ${number(spread)} ${QUANTITIES[key].unit} · ${count} Sensoren`;
+        : `${count} Sensoren, Streuung ${number(spread)} ${QUANTITIES[key].unit}${refCount ? " ohne Referenzen" : ""}`;
     const cancel = this._confirm === "cancel";
     return `${this._header("Läuft", "var(--primary-color)")}
       <p class="lead">${STEPS[state.step - 1]}${state.mode === "quick" ? ", schnell" : ""}</p>
       <p class="sub">${escapeHtml(state.message)}${eta ? ` ${escapeHtml(eta[0].toUpperCase() + eta.slice(1))}.` : ""}</p>
       ${this._progress(state)}
       ${tabs}
-      <p class="label">Abweichung von der ${state.sensors.some((row) => row.reference) ? "Referenz (◆)" : "Gruppe"}</p>
+      <p class="label">${label}</p>
       ${this._bars(state.sensors, key)}
       ${this._notes(state.warnings)}
       ${this._errorLine()}
