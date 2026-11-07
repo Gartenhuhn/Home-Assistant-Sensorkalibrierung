@@ -63,12 +63,12 @@ The times for *Normal*, the largest automatic correction and the notification ta
 ## New and reset sensors
 
 - **New sensors** are marked *New* in the card for 14 days until they are calibrated.
-- **Reference:** place two or three calibrated sensors next to the new ones and tick them under *Reference*. They are selected automatically and not changed. The new sensors are matched to the reference average. Without a reference the group average counts.
+- **Reference:** place two or three calibrated sensors next to the new ones and tap the target icon on the right of their rows. They are selected automatically and not changed. The new sensors are matched to the reference average. Without a reference the group average counts.
 - **Reset sensors:** offsets are stored per IEEE address. If Zigbee2MQTT loses them, for example after removing and re-pairing a device, the card shows *Offsets missing*. **Write back stored offsets** restores them without measuring again.
 
 ## Result
 
-The result shows the spread before and after, or with a reference the largest distance to the reference. A chart shows each sensor before (ring) and after (dot) the correction, with the tolerance as green lines:
+The result shows the spread before and after, or with a reference the largest distance to the reference, as two lanes: grey before, blue after, with the tolerance as a green area. A chart shows each sensor before (ring) and after (dot) the correction, with the tolerance as green lines:
 
 | | Tolerance |
 |---|---|

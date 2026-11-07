@@ -80,11 +80,10 @@ const I18N = {
     from_hours: (p) => `ab ${p.h} h`,
     duration: (p) => `mindestens ${p.min} und höchstens etwa ${p.max} Stunden`,
     duration_unknown: "einige Stunden",
-    ref_title: "Referenz, optional",
-    ref_count: (p) => `${p.n} gewählt`,
-    ref_none: "Mittelwert der Gruppe",
-    ref_hint: "Kalibrierte Sensoren, die nicht verändert werden. Die anderen werden an deren Mittelwert angeglichen. Für neue Sensoren zwei oder drei davon dazulegen und hier anhaken, sie werden dann automatisch mit ausgewählt.",
-    ref_empty: "Noch kein Sensor ist kalibriert. Beim ersten Lauf zählt der Mittelwert der Gruppe.",
+    ref_line: (p) => `Referenz: ${p.names}. Sie bleibt unverändert, die anderen werden an ihren Mittelwert angeglichen.`,
+    ref_tip: "Für neue Sensoren zwei oder drei kalibrierte dazulegen und bei ihnen auf {icon} tippen. Ohne Referenz zählt der Mittelwert der Gruppe.",
+    ref_add: "Als Referenz verwenden",
+    ref_remove: "Referenz, antippen zum Entfernen",
     restore_title: "Offsets passen nicht mehr:",
     restore_missing: "fehlen, Gerät wohl zurückgesetzt",
     restore_changed: "von Hand geändert",
@@ -178,7 +177,7 @@ const I18N = {
           ["1. Anhaken", "Alle Sensoren anhaken, die mitmachen. Nicht angehakte bleiben unverändert."],
           ["2. Zusammenlegen", "Alle angehakten Sensoren dicht nebeneinander an einen ruhigen Platz legen, ohne Sonne, Zugluft oder Heizung. Guter Zigbee-Empfang ist wichtig."],
           ["3. Art wählen", "Normal passt immer. Schnell reicht für Aqara und ähnliche Sensoren."],
-          ["4. Referenz, optional", "Für neue Sensoren zwei oder drei bereits kalibrierte dazulegen und unter Referenz anhaken. Oben müssen sie nicht extra angehakt werden. Ohne Referenz zählt der Mittelwert der Gruppe."],
+          ["4. Referenz, optional", "Für neue Sensoren zwei oder drei bereits kalibrierte dazulegen und bei ihnen auf die Zielscheibe rechts tippen. Sie werden dabei automatisch angehakt. Ohne Referenz zählt der Mittelwert der Gruppe."],
           ["5. Starten und warten", "Ab jetzt läuft alles allein. Sensoren nicht bewegen und möglichst nicht lüften. Ein Neustart von Home Assistant schadet nicht."],
           ["6. Zurückbringen", "Wenn die Kachel „Fertig“ zeigt und die Nachricht kommt, die Sensoren an ihre Plätze bringen."],
         ],
@@ -187,7 +186,7 @@ const I18N = {
         title: "Anzeigen in der Kachel",
         items: [
           ["Neu", "Seit höchstens 14 Tagen in Home Assistant und noch nie kalibriert."],
-          ["Referenz", "Der Sensor dient als Messlatte und wird nicht verändert."],
+          ["Zielscheibe, Referenz", "Antippen macht einen kalibrierten Sensor zur Referenz. Er dient als Messlatte und wird nicht verändert. Nochmal antippen entfernt ihn wieder."],
           ["Offsets fehlen", "Zigbee2MQTT kennt die gespeicherten Offsets nicht mehr, meist nach Entfernen und neu Anlernen. Mit „Gespeicherte Offsets zurückschreiben“ beheben, eine neue Messung ist nicht nötig."],
           ["Offsets geändert", "Die Offsets wurden außerhalb der Kalibrierung geändert, etwa von Hand in Zigbee2MQTT. Zurückschreiben nur, wenn das nicht Absicht war."],
           ["Blauer Balken", "Abweichung des Sensors vom Mittel oder von der Referenz. Blau heißt stabil."],
@@ -197,7 +196,8 @@ const I18N = {
           ["still … Min.", "Der Sensor meldet sich nicht mehr. Die Kalibrierung wartet auf ihn. Kurz die Taste am Sensor drücken oder näher an einen Router legen."],
           ["Streuung", "Abstand zwischen dem höchsten und dem niedrigsten Sensor. Mit Referenz zählt stattdessen der größte Abstand zur Referenz."],
           ["Toleranz", "Ab hier gilt ein Sensor als richtig: ±0,25 °C, ±1 % Feuchte, ±0,3 hPa."],
-          ["Grafik im Ergebnis", "Ring: Abweichung vorher. Punkt: Abweichung nachher. Die grünen Linien zeigen die Toleranz."],
+          ["Spuren im Ergebnis", "Grau: Bereich aller korrigierten Sensoren vorher. Blau: nachher. Das grüne Feld ist die Toleranz."],
+          ["Grafik je Sensor", "Ring: Abweichung vorher. Punkt: Abweichung nachher. Die grünen Linien zeigen die Toleranz."],
         ],
       },
       {
@@ -281,11 +281,10 @@ const I18N = {
     from_hours: (p) => `from ${p.h} h`,
     duration: (p) => `at least ${p.min} and at most about ${p.max} hours`,
     duration_unknown: "a few hours",
-    ref_title: "Reference, optional",
-    ref_count: (p) => `${p.n} selected`,
-    ref_none: "Group average",
-    ref_hint: "Calibrated sensors that are not changed. The others are matched to their average. For new sensors, place two or three of them alongside and tick them here; they are selected automatically.",
-    ref_empty: "No sensor is calibrated yet. The first run uses the group average.",
+    ref_line: (p) => `Reference: ${p.names}. It stays unchanged; the others are matched to its average.`,
+    ref_tip: "For new sensors, place two or three calibrated ones alongside and tap {icon} on them. Without a reference the group average counts.",
+    ref_add: "Use as reference",
+    ref_remove: "Reference, tap to remove",
     restore_title: "Offsets no longer match:",
     restore_missing: "missing, device probably reset",
     restore_changed: "changed manually",
@@ -379,7 +378,7 @@ const I18N = {
           ["1. Tick", "Tick every sensor that takes part. Unticked sensors stay unchanged."],
           ["2. Place together", "Put all ticked sensors close together in a calm spot, away from sun, draughts and heating. Good Zigbee reception matters."],
           ["3. Choose a mode", "Normal always works. Quick is enough for Aqara and similar sensors."],
-          ["4. Reference, optional", "For new sensors, add two or three calibrated ones and tick them under Reference. They don't need to be ticked above. Without a reference the group average counts."],
+          ["4. Reference, optional", "For new sensors, add two or three calibrated ones and tap the target icon on the right of their rows. They are ticked automatically. Without a reference the group average counts."],
           ["5. Start and wait", "From now on everything runs on its own. Don't move the sensors and avoid airing. Restarting Home Assistant does no harm."],
           ["6. Put back", "When the card shows “Done” and the notification arrives, put the sensors back in place."],
         ],
@@ -388,7 +387,7 @@ const I18N = {
         title: "Indicators in the card",
         items: [
           ["New", "Added to Home Assistant within the last 14 days and never calibrated."],
-          ["Reference", "The sensor serves as the yardstick and is not changed."],
+          ["Target icon, Reference", "Tapping it makes a calibrated sensor the reference. It serves as the yardstick and is not changed. Tap again to remove it."],
           ["Offsets missing", "Zigbee2MQTT no longer knows the stored offsets, usually after removing and re-pairing. Fix with “Write back stored offsets”, no new measurement needed."],
           ["Offsets changed", "The offsets were changed outside the calibration, for example by hand in Zigbee2MQTT. Write back only if that was not intended."],
           ["Blue bar", "Deviation of the sensor from the average or the reference. Blue means stable."],
@@ -398,7 +397,8 @@ const I18N = {
           ["silent … min", "The sensor stopped reporting. The calibration waits for it. Briefly press its button or move it closer to a router."],
           ["Spread", "Distance between the highest and the lowest sensor. With a reference, the largest distance to the reference counts instead."],
           ["Tolerance", "Within this a sensor counts as correct: ±0.25 °C, ±1 % humidity, ±0.3 hPa."],
-          ["Chart in the result", "Ring: deviation before. Dot: deviation after. The green lines show the tolerance."],
+          ["Lanes in the result", "Grey: range of all corrected sensors before. Blue: after. The green area is the tolerance."],
+          ["Chart per sensor", "Ring: deviation before. Dot: deviation after. The green lines show the tolerance."],
         ],
       },
       {
@@ -726,6 +726,24 @@ const STYLES = `
   button.primary ha-icon, button.with-icon ha-icon { --mdc-icon-size: 18px; }
   button.with-icon { display: inline-flex; align-items: center; gap: 6px; }
   footer .info.full { flex: 1 1 100%; }
+  .reftoggle { flex: none; width: 34px; min-width: 34px; min-height: 34px; padding: 0; border: none; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--secondary-text-color); opacity: .55; }
+  .reftoggle ha-icon { --mdc-icon-size: 20px; }
+  .reftoggle:hover { opacity: 1; }
+  .reftoggle.on { opacity: 1; color: var(--success-color); background: color-mix(in srgb, var(--success-color) 16%, transparent); }
+  .reftoggle-space { flex: none; width: 34px; }
+  .refline { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.4; margin: 10px 0 4px; }
+  .refline ha-icon { --mdc-icon-size: 18px; color: var(--success-color); flex: none; margin-top: 1px; }
+  ha-icon.inline { --mdc-icon-size: 15px; vertical-align: -3px; }
+  .lanes { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; align-items: center; margin: 8px 0 16px; font-size: 12px; color: var(--secondary-text-color); }
+  .lane { position: relative; height: 16px; }
+  .lane .zone { position: absolute; top: -4px; bottom: -4px; background: color-mix(in srgb, var(--success-color) 14%, transparent);
+    border-left: 1px solid color-mix(in srgb, var(--success-color) 75%, transparent); border-right: 1px solid color-mix(in srgb, var(--success-color) 75%, transparent); }
+  .lane .zero { position: absolute; left: 50%; top: -6px; bottom: -6px; width: 1px; background: var(--secondary-text-color); opacity: .5; }
+  .lane .before { position: absolute; top: 3px; height: 10px; border-radius: 5px; min-width: 6px; background: color-mix(in srgb, var(--secondary-text-color) 55%, transparent); }
+  .lane .after { position: absolute; top: 0; height: 16px; border-radius: 8px; min-width: 8px; background: var(--primary-color); }
+  .lane-axis { display: flex; justify-content: space-between; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .mini .dot.after { width: 12px; height: 12px; margin-left: -6px; top: 5px; }
   .notes li.info, .notes li.info ha-icon { color: var(--secondary-text-color); }
   .tabs button { flex: 1 1 0; min-width: 0; padding: 4px; flex-direction: column; gap: 1px; min-height: 46px; font-size: 12px; }
   .tabs button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -944,10 +962,13 @@ class SensorKalibrierungCard extends HTMLElement {
         }
       });
     });
-    root.querySelectorAll("input[data-reference]").forEach((element) => {
-      element.addEventListener("change", () =>
-        this._toggleReference(element.dataset.reference, element.checked),
-      );
+    root.querySelectorAll("[data-ref-toggle]").forEach((element) => {
+      element.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = element.dataset.refToggle;
+        this._toggleReference(id, !(this._state.references || []).includes(id));
+      });
     });
     root.querySelectorAll("input[data-pick]").forEach((element) => {
       element.addEventListener("change", () =>
@@ -1047,24 +1068,27 @@ class SensorKalibrierungCard extends HTMLElement {
           `<ha-icon style="--q: ${QUANTITIES[key].color}" icon="${QUANTITIES[key].icon}"></ha-icon>`,
       )
       .join("")}</span>`;
+    const isRef = references.has(item.id);
+    const refButton =
+      item.last_calibrated || isRef
+        ? `<button class="reftoggle ${isRef ? "on" : ""}" data-ref-toggle="${escapeHtml(item.id)}" aria-pressed="${isRef}" title="${escapeHtml(isRef ? t("ref_remove") : t("ref_add"))}" aria-label="${escapeHtml(isRef ? t("ref_remove") : t("ref_add"))}"><ha-icon icon="mdi:target"></ha-icon></button>`
+        : `<span class="reftoggle-space"></span>`;
     return `<label class="pick">
       <input type="checkbox" data-pick="${escapeHtml(item.id)}" ${selected.has(item.id) ? "checked" : ""}>
-      <span class="text"><span class="line">${escapeHtml(item.name)}${tag}${areaText}</span>${when}</span>${low}${icons}
+      <span class="text"><span class="line">${escapeHtml(item.name)}${tag}${areaText}</span>${when}</span>${low}${icons}${refButton}
     </label>`;
   }
 
   _idle(state) {
     const selected = new Set(state.selection);
     const references = new Set(state.references || []);
-    const referenceCandidates = state.candidates.filter(
-      (item) => item.last_calibrated || references.has(item.id),
-    );
     const groups = GROUPS.map((group) => {
       const items = state.candidates.filter((item) => item.group === group.key);
       if (!items.length) return "";
       const [title, hint] = t(`groups.${group.key}`);
       const count = items.filter((item) => selected.has(item.id)).length;
-      const open = this._openGroups[group.key] ?? group.open;
+      // Gruppen ohne angehakten Sensor starten zugeklappt, das hält die Liste kurz.
+      const open = this._openGroups[group.key] ?? (count > 0 || group.key === "full");
       return `<details data-group="${group.key}" ${open ? "open" : ""}>
         <summary><ha-icon icon="${group.icon}"></ha-icon>${escapeHtml(title)}<span>${escapeHtml(t("of", { a: count, b: items.length }))}</span></summary>
         ${hint ? `<p class="hint">${escapeHtml(hint)}</p>` : ""}
@@ -1085,28 +1109,16 @@ class SensorKalibrierungCard extends HTMLElement {
         return `<button class="${key === mode ? "on" : ""}" data-action="mode" data-mode="${key}"><ha-icon icon="${key === "quick" ? "mdi:lightning-bolt-outline" : "mdi:timer-sand"}"></ha-icon>${escapeHtml(label + from)}</button>`;
       })
       .join("")}</div><p class="hint">${escapeHtml(t(`modes.${mode}`)[1])}</p>`;
-    const referenceOpen = this._openGroups.reference ?? references.size > 0;
-    const referenceList = referenceCandidates.length
-      ? referenceCandidates
-          .map(
-            (item) => `<label class="pick">
-              <input type="checkbox" data-reference="${escapeHtml(item.id)}" ${references.has(item.id) ? "checked" : ""}>
-              <span class="text"><span class="line">${escapeHtml(item.name)}</span>${
-                item.last_calibrated
-                  ? `<span class="when">${escapeHtml(t("calibrated_at", { date: fullDate(item.last_calibrated) }))}</span>`
-                  : item.correctable.length
-                    ? `<span class="when warn-text">${escapeHtml(t("not_calibrated"))}</span>`
-                    : ""
-              }</span>
-            </label>`,
-          )
-          .join("")
-      : `<p class="hint">${escapeHtml(t("ref_empty"))}</p>`;
-    const referenceBlock = `<details data-group="reference" ${referenceOpen ? "open" : ""}>
-        <summary><ha-icon icon="mdi:target"></ha-icon>${escapeHtml(t("ref_title"))}<span>${escapeHtml(references.size ? t("ref_count", { n: references.size }) : t("ref_none"))}</span></summary>
-        <p class="hint">${escapeHtml(t("ref_hint"))}</p>
-        ${referenceList}
-      </details>`;
+    const refNames = state.candidates
+      .filter((item) => references.has(item.id))
+      .map((item) => item.name);
+    const tip = escapeHtml(t("ref_tip")).replace(
+      "{icon}",
+      '<ha-icon class="inline" icon="mdi:target"></ha-icon>',
+    );
+    const referenceBlock = refNames.length
+      ? `<p class="refline"><ha-icon icon="mdi:target"></ha-icon><span>${escapeHtml(t("ref_line", { names: refNames.join(", ") }))}</span></p>`
+      : `<p class="hint">${tip}</p>`;
     const flagged = state.candidates.filter((item) => item.offset_state);
     const restoreConfirm = this._confirm === "restore";
     const restore = flagged.length
@@ -1130,8 +1142,8 @@ class SensorKalibrierungCard extends HTMLElement {
       ${modes}
       ${bridge}
       ${restore}
-      ${groups}
       ${referenceBlock}
+      ${groups}
       ${this._errorLine()}
       <footer>
         <span class="info full">${escapeHtml(t("selected", { n: selected.size, refs: references.size }))}</span>
@@ -1253,6 +1265,8 @@ class SensorKalibrierungCard extends HTMLElement {
       ...counted.flatMap((item) => [Math.abs(item.deviation), Math.abs(item.after ?? 0)]),
     );
     const pos = (value) => Math.min(99, Math.max(1, 50 + (value / limit) * 48));
+    const zoneWidth = Math.min(48, (meta.tolerance / limit) * 48);
+    const zone = `<i class="zone" style="left: ${50 - zoneWidth}%; width: ${2 * zoneWidth}%"></i>`;
     const band = (values, cls) => {
       if (!values.length) return "";
       const left = pos(Math.min(...values));
@@ -1286,10 +1300,11 @@ class SensorKalibrierungCard extends HTMLElement {
     return `<div class="hero" style="--q: ${meta.color}">
         <div class="big">${big}</div><div class="what">${what}</div>
       </div>
-      <div class="span" style="--q: ${meta.color}" title="${escapeHtml(t("span_title"))}">
-        <i class="base"></i><i class="zero"></i>${band(before, "before")}${band(after, "after")}
-      </div>
-      <div class="span-legend"><span>−${edge}</span><span>0</span><span>+${edge}</span></div>`;
+      <div class="lanes" title="${escapeHtml(t("span_title"))}">
+        <span>${escapeHtml(t("legend_before"))}</span><div class="lane">${zone}<i class="zero"></i>${band(before, "before")}</div>
+        <span>${escapeHtml(t("legend_after"))}</span><div class="lane">${zone}<i class="zero"></i>${band(after, "after")}</div>
+        <span></span><div class="lane-axis"><span>−${edge}</span><span>0</span><span>+${edge}</span></div>
+      </div>`;
   }
 
   _rows(data, names, key, canAdopt) {

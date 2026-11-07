@@ -63,12 +63,12 @@ Die Zeiten für *Normal*, die größte automatische Korrektur und die Empfänger
 ## Neue und zurückgesetzte Sensoren
 
 - **Neue Sensoren** tragen in der Kachel 14 Tage lang die Markierung *Neu*, bis sie kalibriert sind.
-- **Referenz:** Zwei oder drei kalibrierte Sensoren neben die neuen legen und unter *Referenz* anhaken. Sie werden automatisch mit ausgewählt und nicht verändert. Die neuen werden an den Mittelwert der Referenzen angeglichen. Ohne Referenz zählt der Mittelwert der Gruppe.
+- **Referenz:** Zwei oder drei kalibrierte Sensoren neben die neuen legen und in ihrer Zeile rechts auf die Zielscheibe tippen. Sie werden automatisch mit ausgewählt und nicht verändert. Die neuen werden an den Mittelwert der Referenzen angeglichen. Ohne Referenz zählt der Mittelwert der Gruppe.
 - **Zurückgesetzte Sensoren:** Die Offsets werden je IEEE-Adresse gespeichert. Verliert Zigbee2MQTT sie, etwa nach Entfernen und neu Anlernen, zeigt die Kachel *Offsets fehlen*. **Gespeicherte Offsets zurückschreiben** stellt sie ohne neue Messung wieder her.
 
 ## Ergebnis
 
-Das Ergebnis zeigt die Streuung vorher und nachher, mit Referenz den größten Abstand zur Referenz. Eine Grafik zeigt jeden Sensor vor (Ring) und nach (Punkt) der Korrektur, die Toleranz als grüne Linien:
+Das Ergebnis zeigt die Streuung vorher und nachher, mit Referenz den größten Abstand zur Referenz, als zwei Spuren: grau vorher, blau nachher, die Toleranz als grünes Feld. Eine Grafik zeigt jeden Sensor vor (Ring) und nach (Punkt) der Korrektur, die Toleranz als grüne Linien:
 
 | | Toleranz |
 |---|---|

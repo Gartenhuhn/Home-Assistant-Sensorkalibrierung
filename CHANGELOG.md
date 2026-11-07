@@ -1,5 +1,19 @@
 # Changelog / Änderungen
 
+## 1.1.6
+
+**English**
+
+- References are chosen with the target icon in each calibrated sensor's row. The separate reference list is gone, which makes the selection much shorter.
+- Groups without a ticked sensor start collapsed.
+- The result shows before and after as two lanes with the tolerance as a green area, so nothing is hidden. The dot for “after” is slightly larger than the ring for “before”.
+
+**Deutsch**
+
+- Referenzen wählt man mit der Zielscheibe in der Zeile jedes kalibrierten Sensors. Die eigene Referenzliste entfällt, die Auswahl wird deutlich kürzer.
+- Gruppen ohne angehakten Sensor starten zugeklappt.
+- Das Ergebnis zeigt vorher und nachher als zwei Spuren mit der Toleranz als grünes Feld, nichts wird mehr verdeckt. Der Punkt für „nachher“ ist etwas größer als der Ring für „vorher“.
+
 ## 1.1.5
 
 **English**
