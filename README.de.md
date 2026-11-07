@@ -96,7 +96,7 @@ Bestehende Offsets bleiben während der Messung aktiv. Der neue Offset ist der a
 - **Abgleich, keine absolute Genauigkeit:** Die Sensoren werden aneinander oder an die Referenz angeglichen. Liegen alle in dieselbe Richtung daneben, liegen sie danach gemeinsam daneben. Wenn absolute Werte wichtig sind, einen verlässlichen Sensor als Referenz nehmen.
 - **Nur Offset:** Zigbee2MQTT verschiebt den Messwert um einen festen Betrag. Das korrigiert den Fehler am Kalibrierpunkt, nicht Fehler, die mit dem Abstand dazu wachsen. Drinnen, etwa bei 18 bis 25 °C und 40 bis 65 %, spielt das kaum eine Rolle.
 - **Außensensoren:** Vor dem Aufhängen drinnen kalibrieren. Bei Frost oder über etwa 85 % Feuchte bleiben Abweichungen von einigen Prozent Feuchte möglich, nach Nebel oder Tau bleiben viele Sensoren eine Weile bei fast 100 %.
-- **Der Platz zählt mehr:** Sonne, eine warme Wand oder die Luft unter dem Dachüberstand verfälschen Außenwerte leicht um mehrere Grad. Ein belüfteter Strahlungsschutz bringt mehr als jede Kalibrierung.
+- **Der Platz zählt mehr:** Sonne oder eine warme Wand verfälschen Außenwerte leicht um mehrere Grad. Direkt unter dem Dachkasten kann sich warme Luft stauen und bis etwa 1 °C ausmachen. Besser etwas tiefer an der Wand, noch im Schutz des Dachüberstands. Ein belüfteter Strahlungsschutz bringt mehr als jede Kalibrierung.
 
 ## Dienste und Statussensor
 
