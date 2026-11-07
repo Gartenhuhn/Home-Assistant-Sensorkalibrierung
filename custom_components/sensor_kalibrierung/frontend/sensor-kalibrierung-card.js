@@ -734,7 +734,7 @@ const STYLES = `
   .reftoggle-space { flex: none; width: 34px; }
   .refline { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.4; margin: 10px 0 4px; }
   .refline ha-icon { --mdc-icon-size: 18px; color: var(--success-color); flex: none; margin-top: 1px; }
-  ha-icon.inline { --mdc-icon-size: 15px; vertical-align: -3px; }
+  svg.inline { width: 1.15em; height: 1.15em; vertical-align: -0.22em; fill: currentColor; }
   .lanes { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; align-items: center; margin: 8px 0 16px; font-size: 12px; color: var(--secondary-text-color); }
   .lane { position: relative; height: 16px; }
   .lane .zone { position: absolute; top: -4px; bottom: -4px; background: color-mix(in srgb, var(--success-color) 14%, transparent);
@@ -1114,7 +1114,7 @@ class SensorKalibrierungCard extends HTMLElement {
       .map((item) => item.name);
     const tip = escapeHtml(t("ref_tip")).replace(
       "{icon}",
-      '<ha-icon class="inline" icon="mdi:target"></ha-icon>',
+      '<svg class="inline" viewBox="0 0 24 24" aria-hidden="true"><path d="M11,2V4.07C7.38,4.53 4.53,7.38 4.07,11H2V13H4.07C4.53,16.62 7.38,19.47 11,19.93V22H13V19.93C16.62,19.47 19.47,16.62 19.93,13H22V11H19.93C19.47,7.38 16.62,4.53 13,4.07V2M11,6.08V8H13V6.09C15.5,6.5 17.5,8.5 17.92,11H16V13H17.91C17.5,15.5 15.5,17.5 13,17.92V16H11V17.91C8.5,17.5 6.5,15.5 6.08,13H8V11H6.09C6.5,8.5 8.5,6.5 11,6.08M12,11A1,1 0 0,0 11,12A1,1 0 0,0 12,13A1,1 0 0,0 13,12A1,1 0 0,0 12,11Z"/></svg>',
     );
     const referenceBlock = refNames.length
       ? `<p class="refline"><ha-icon icon="mdi:target"></ha-icon><span>${escapeHtml(t("ref_line", { names: refNames.join(", ") }))}</span></p>`
