@@ -68,7 +68,7 @@ Bestehende Offsets bleiben während der Messung aktiv. Der neue Offset ist der a
 
 ## Ergebnis
 
-Die Ergebnisansicht zeigt die Streuung vorher und nachher. Eine Grafik zeigt je Sensor die Abweichung vor und nach der Korrektur. Nach dem Schließen bleibt das Ergebnis über **Letztes Ergebnis** abrufbar.
+Die Ergebnisansicht zeigt die Streuung vorher und nachher. Eine Grafik zeigt je Sensor die Abweichung vor und nach der Korrektur. Nach dem Schließen bleibt das Ergebnis über **Ergebnis** in der Auswahl abrufbar. Rückgängig machen lässt sich der letzte Lauf in der Ergebnisansicht.
 
 ## Rückgängig
 

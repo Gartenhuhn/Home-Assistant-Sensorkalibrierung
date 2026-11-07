@@ -343,7 +343,8 @@ const STYLES = `
   .list .who span { display: block; font-size: 12px; color: var(--secondary-text-color); font-variant-numeric: tabular-nums; }
   .list .who button { min-height: 30px; font-size: 12px; margin-top: 5px; padding: 0 10px; }
   .mini { position: relative; height: 22px; }
-  .mini .zone { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; background: color-mix(in srgb, var(--success-color) 16%, transparent); }
+  .mini .zone { position: absolute; top: 2px; bottom: 2px; border-left: 1px solid color-mix(in srgb, var(--success-color) 75%, transparent);
+    border-right: 1px solid color-mix(in srgb, var(--success-color) 75%, transparent); }
   .mini .zero { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--divider-color); }
   .mini .link { position: absolute; top: 10px; height: 2px; background: color-mix(in srgb, var(--secondary-text-color) 45%, transparent); }
   .mini .dot.clip::after { content: ""; position: absolute; top: 1px; width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
@@ -356,7 +357,7 @@ const STYLES = `
     border-top: 1px solid color-mix(in srgb, var(--divider-color) 70%, transparent); padding-top: 4px; font-variant-numeric: tabular-nums; }
   .list .scale div { grid-column: 3; display: flex; justify-content: space-between; }
   .legend { flex-wrap: wrap; margin: 0 0 4px; }
-  .legend .zonekey { width: 14px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--success-color) 22%, transparent); }
+  .legend .zonekey { width: 12px; height: 12px; border-left: 1px solid var(--success-color); border-right: 1px solid var(--success-color); }
   .legend .dot { width: 10px; height: 10px; }
   .older { font-size: 12px; color: var(--secondary-text-color); margin: 0 0 6px; }
 
@@ -371,7 +372,9 @@ const STYLES = `
     box-shadow: 0 1px 3px color-mix(in srgb, #000 22%, transparent); }
   .segment button.on ha-icon { color: var(--primary-color); }
   button.primary { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
-  button.primary ha-icon { --mdc-icon-size: 18px; }
+  button.primary ha-icon, button.with-icon ha-icon { --mdc-icon-size: 18px; }
+  button.with-icon { display: inline-flex; align-items: center; gap: 6px; }
+  footer .info.full { flex: 1 1 100%; }
 `;
 
 class SensorKalibrierungCard extends HTMLElement {
@@ -748,11 +751,8 @@ class SensorKalibrierungCard extends HTMLElement {
     const bridge = state.bridge_ready
       ? ""
       : `<p class="error">Zigbee2MQTT ist noch nicht erreichbar.</p>`;
-    const undo = state.can_rollback
-      ? `<button data-action="rollback" class="${this._confirm === "rollback" ? "danger" : ""}">${this._confirm === "rollback" ? "Wirklich zurücknehmen?" : "Letzten Lauf zurücknehmen"}</button>`
-      : "";
     const lastButton = state.last?.result
-      ? `<button data-action="show-last">Letztes Ergebnis</button>`
+      ? `<button class="with-icon" data-action="show-last" title="Letztes Ergebnis ansehen"><ha-icon icon="mdi:history"></ha-icon>Ergebnis</button>`
       : "";
     return `${this._header("Bereit", "var(--success-color)")}
       <p class="lead">Sensoren nebeneinanderlegen</p>
@@ -764,10 +764,9 @@ class SensorKalibrierungCard extends HTMLElement {
       ${referenceBlock}
       ${this._errorLine()}
       <footer>
-        <span class="info">${selected.size} Sensoren ausgewählt${references.size ? `, davon ${references.size} als Referenz` : ""}</span>
+        <span class="info full">${selected.size} Sensoren ausgewählt${references.size ? `, davon ${references.size} als Referenz` : ""}</span>
         ${lastButton}
-        ${undo}
-        <button class="primary" data-action="start"><ha-icon icon="mdi:play"></ha-icon>Kalibrierung starten</button>
+        <button class="primary" data-action="start"><ha-icon icon="mdi:play"></ha-icon>Starten</button>
       </footer>`;
   }
 
@@ -847,9 +846,13 @@ class SensorKalibrierungCard extends HTMLElement {
     if (!items.length) return "";
     const counted = items.filter((item) => ["ok", "reference"].includes(item.status) || item.applied);
     const before = counted.map((item) => item.deviation);
-    const after = counted
+    let after = counted
       .map((item) => item.after)
       .filter((value) => value !== null && value !== undefined);
+    if (!after.length && data.spread_after !== null && data.spread_after !== undefined) {
+      // Läufe vor 1.1.0 haben nur die Streuung nachher, keine Werte je Sensor.
+      after = [-data.spread_after / 2, data.spread_after / 2];
+    }
     const limit = Math.max(
       meta.scale / 2,
       ...counted.flatMap((item) => [Math.abs(item.deviation), Math.abs(item.after ?? 0)]),
