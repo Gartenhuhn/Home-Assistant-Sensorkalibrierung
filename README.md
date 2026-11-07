@@ -44,7 +44,7 @@ Das Fragezeichen oben rechts in der Kachel öffnet eine Kurzanleitung. Sie erkl�
 ## Neue und zurückgesetzte Sensoren
 
 - **Neue Sensoren** tragen in der Kachel 14 Tage lang die Markierung *Neu*, bis sie kalibriert sind.
-- **Referenz:** Zwei oder drei bereits kalibrierte Sensoren dazulegen und unter *Referenz* anhaken. Sie werden nicht verändert. Die anderen werden an deren Mittelwert angeglichen. Ohne Referenz zählt der Mittelwert der Gruppe.
+- **Referenz:** Zwei oder drei bereits kalibrierte Sensoren dazulegen und unter *Referenz* anhaken. Oben müssen sie nicht extra angehakt werden. Sie werden nicht verändert. Die anderen werden an deren Mittelwert angeglichen. Ohne Referenz zählt der Mittelwert der Gruppe.
 - **Zurückgesetzte Sensoren:** Die Offsets werden je IEEE-Adresse gespeichert. Fehlen sie in Zigbee2MQTT, zeigt die Kachel *Offsets fehlen*. **Gespeicherte Offsets zurückschreiben** stellt sie wieder her, ohne neue Messung.
 
 ## Rechenweg
@@ -88,6 +88,10 @@ Der Sensor `sensor.sensor_kalibrierung_status` zeigt die Phase, etwa für Automa
 pip install pytest-homeassistant-custom-component
 pytest
 ```
+
+## Änderungen
+
+Siehe [CHANGELOG.md](CHANGELOG.md).
 
 ## Lizenz
 

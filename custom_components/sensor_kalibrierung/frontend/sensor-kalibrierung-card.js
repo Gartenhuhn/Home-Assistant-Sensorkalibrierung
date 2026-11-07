@@ -86,7 +86,7 @@ const HELP = [
       ["1. Anhaken", "Alle Sensoren anhaken, die mitmachen. Nicht angehakte bleiben unverändert."],
       ["2. Zusammenlegen", "Alle angehakten Sensoren dicht nebeneinander an einen ruhigen Platz legen, ohne Sonne, Zugluft oder Heizung. Guter Zigbee-Empfang ist wichtig."],
       ["3. Art wählen", "Normal passt immer. Schnell reicht für Aqara und ähnliche Sensoren."],
-      ["4. Referenz, optional", "Für neue Sensoren zwei oder drei bereits kalibrierte dazulegen und unter Referenz anhaken. Ohne Referenz zählt der Mittelwert der Gruppe."],
+      ["4. Referenz, optional", "Für neue Sensoren zwei oder drei bereits kalibrierte dazulegen und unter Referenz anhaken. Oben müssen sie nicht extra angehakt werden. Ohne Referenz zählt der Mittelwert der Gruppe."],
       ["5. Starten und warten", "Ab jetzt läuft alles allein. Sensoren nicht bewegen. Ein Neustart von Home Assistant schadet nicht."],
       ["6. Zurückbringen", "Wenn die Kachel „Fertig“ zeigt und die Nachricht kommt, die Sensoren an ihre Plätze bringen."],
     ],
@@ -95,6 +95,7 @@ const HELP = [
     title: "Anzeigen in der Kachel",
     items: [
       ["Neu", "Seit höchstens 14 Tagen in Home Assistant und noch nie kalibriert."],
+      ["Referenz", "Der Sensor dient als Messlatte und wird nicht verändert."],
       ["Offsets fehlen", "Zigbee2MQTT kennt die gespeicherten Offsets nicht mehr, meist nach Entfernen und neu Anlernen. Mit „Gespeicherte Offsets zurückschreiben“ beheben, eine neue Messung ist nicht nötig."],
       ["Offsets geändert", "Die Offsets wurden außerhalb der Kalibrierung geändert, etwa von Hand in Zigbee2MQTT. Zurückschreiben nur, wenn das nicht Absicht war."],
       ["Blauer Balken", "Abweichung des Sensors vom Mittel oder von der Referenz. Blau heißt stabil."],
@@ -506,10 +507,18 @@ class SensorKalibrierungCard extends HTMLElement {
   }
 
   _toggleReference(id, checked) {
+    // Eine Referenz misst immer mit. Wird sie abgewählt, fällt sie ganz aus
+    // der Auswahl, damit sie nicht versehentlich neu kalibriert wird.
     const references = new Set(this._state.references || []);
-    if (checked) references.add(id);
-    else references.delete(id);
-    this._saveSelection({ references: [...references] });
+    const selected = new Set(this._state.selection);
+    if (checked) {
+      references.add(id);
+      selected.add(id);
+    } else {
+      references.delete(id);
+      selected.delete(id);
+    }
+    this._saveSelection({ selection: [...selected], references: [...references] });
   }
 
   _askOrRun(action, service) {
@@ -649,7 +658,7 @@ class SensorKalibrierungCard extends HTMLElement {
       .join("")}</div>`;
   }
 
-  _pick(item, selected) {
+  _pick(item, selected, references) {
     const areaText = item.area
       ? `<small> · ${escapeHtml(item.area)}</small>`
       : "";
@@ -670,9 +679,12 @@ class SensorKalibrierungCard extends HTMLElement {
             : "";
       when = `<span class="when">${escapeHtml(text)}${offsets}</span>`;
     }
-    const tag = item.new
+    let tag = item.new
       ? `<span class="tag" style="--tag: var(--primary-color)">Neu</span>`
       : "";
+    if (references.has(item.id)) {
+      tag += `<span class="tag" style="--tag: var(--success-color)">Referenz</span>`;
+    }
     const icons = `<span class="qi" title="${escapeHtml(
       item.quantities.map((key) => QUANTITIES[key]?.label).join(", "),
     )}">${item.quantities
@@ -690,7 +702,9 @@ class SensorKalibrierungCard extends HTMLElement {
   _idle(state) {
     const selected = new Set(state.selection);
     const references = new Set(state.references || []);
-    const chosen = state.candidates.filter((item) => selected.has(item.id));
+    const referenceCandidates = state.candidates.filter(
+      (item) => item.last_calibrated || references.has(item.id),
+    );
     const groups = GROUPS.map((group) => {
       const items = state.candidates.filter((item) => item.group === group.key);
       if (!items.length) return "";
@@ -699,7 +713,7 @@ class SensorKalibrierungCard extends HTMLElement {
       return `<details data-group="${group.key}" ${open ? "open" : ""}>
         <summary><ha-icon icon="${group.icon}"></ha-icon>${escapeHtml(group.title)}<span>${count} von ${items.length}</span></summary>
         ${group.hint ? `<p class="hint">${escapeHtml(group.hint)}</p>` : ""}
-        ${items.map((item) => this._pick(item, selected)).join("")}
+        ${items.map((item) => this._pick(item, selected, references)).join("")}
       </details>`;
     }).join("");
     const mode = MODES[state.mode] ? state.mode : "standard";
@@ -714,8 +728,8 @@ class SensorKalibrierungCard extends HTMLElement {
       )
       .join("")}</div><p class="hint">${escapeHtml(MODES[mode].hint)}</p>`;
     const referenceOpen = this._openGroups.reference ?? references.size > 0;
-    const referenceList = chosen.length
-      ? chosen
+    const referenceList = referenceCandidates.length
+      ? referenceCandidates
           .map(
             (item) => `<label class="pick">
               <input type="checkbox" data-reference="${escapeHtml(item.id)}" ${references.has(item.id) ? "checked" : ""}>
@@ -729,10 +743,10 @@ class SensorKalibrierungCard extends HTMLElement {
             </label>`,
           )
           .join("")
-      : `<p class="hint">Zuerst oben Sensoren anhaken.</p>`;
+      : `<p class="hint">Noch kein Sensor ist kalibriert. Beim ersten Lauf zählt der Mittelwert der Gruppe.</p>`;
     const referenceBlock = `<details data-group="reference" ${referenceOpen ? "open" : ""}>
         <summary><ha-icon icon="mdi:target"></ha-icon>Referenz, optional<span>${references.size ? `${references.size} gewählt` : "Mittelwert der Gruppe"}</span></summary>
-        <p class="hint">Bereits kalibrierte Sensoren, die nicht verändert werden. Die anderen werden an deren Mittelwert angeglichen. Für neue Sensoren zwei oder drei kalibrierte dazulegen und hier anhaken.</p>
+        <p class="hint">Kalibrierte Sensoren, die nicht verändert werden. Die anderen werden an deren Mittelwert angeglichen. Für neue Sensoren zwei oder drei davon dazulegen und hier anhaken, sie werden dann automatisch mit ausgewählt.</p>
         ${referenceList}
       </details>`;
     const flagged = state.candidates.filter((item) => item.offset_state);
