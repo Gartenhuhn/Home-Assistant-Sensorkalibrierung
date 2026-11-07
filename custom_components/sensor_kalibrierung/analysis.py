@@ -59,12 +59,18 @@ def deviations(
     reference_ids: Iterable[str] | None = None,
     step: float = 300,
     max_hold: float = 3 * 3600,
+    skip: set[int] | None = None,
 ) -> dict[str, list[tuple[float, float]]]:
-    """Berechnet je Sensor den Abstand zur Referenz pro Rasterpunkt."""
+    """Berechnet je Sensor den Abstand zur Referenz pro Rasterpunkt.
+
+    Rasterpunkte, deren Index in skip steht, werden übergangen.
+    """
     references = _references(series_by_id, reference_ids)
     group = [item for item in group_ids if item in series_by_id]
     result: dict[str, list[tuple[float, float]]] = {key: [] for key in series_by_id}
-    for ts in time_grid(start, end, step):
+    for index, ts in enumerate(time_grid(start, end, step)):
+        if skip and index in skip:
+            continue
         values = {
             key: value
             for key, series in series_by_id.items()
@@ -121,15 +127,18 @@ def analyse_window(
     max_hold: float = 3 * 3600,
     min_points: int = 6,
     min_coverage: float = 0.0,
+    skip: set[int] | None = None,
 ) -> dict[str, WindowStats]:
     """Wertet ein Messfenster aus.
 
     Ohne Referenzgruppe wird die Gruppe anschließend auf null zentriert.
-    Sensoren, die zu selten gemeldet haben, fehlen im Ergebnis.
+    Sensoren, die zu selten gemeldet haben, fehlen im Ergebnis. Rasterpunkte
+    in skip, etwa während einer schnellen Änderung im Raum, zählen nicht.
     """
     group = list(group_ids)
     references = _references(series_by_id, reference_ids)
-    grid_points = len(time_grid(start, end, step))
+    total = len(time_grid(start, end, step))
+    grid_points = total - len([index for index in skip or () if index < total])
     data = deviations(
         series_by_id,
         start,
@@ -138,6 +147,7 @@ def analyse_window(
         reference_ids=references,
         step=step,
         max_hold=max_hold,
+        skip=skip,
     )
     needed = max(min_points, int(min_coverage * grid_points))
     stats: dict[str, WindowStats] = {}
@@ -194,3 +204,44 @@ def unstable_sensors(
         if key not in recent or key not in earlier or abs(recent[key].deviation - earlier[key].deviation) > tolerance:
             unstable.append(key)
     return unstable
+
+
+def disturbed_points(
+    series_by_id: Mapping[str, Series],
+    start: float,
+    end: float,
+    *,
+    level_ids: Iterable[str],
+    tolerance: float,
+    step: float = 300,
+    max_hold: float = 3 * 3600,
+    lookback: float = 2700,
+) -> set[int]:
+    """Findet Rasterpunkte, an denen sich der ganze Raum schnell verändert.
+
+    Nach Lüften, Kochen oder dem Anspringen einer Heizung ändern sich alle
+    Sensoren gleichzeitig. Sensoren, die selten melden, hinken dabei hinterher,
+    und die lineare Interpolation erzeugt scheinbare Abweichungen. Ein Punkt
+    gilt als gestört, wenn der Median der Bezugssensoren innerhalb von
+    lookback um mehr als zwei Toleranzen geschwankt hat.
+    """
+    ids = [item for item in level_ids if item in series_by_id]
+    if not ids:
+        return set()
+    back = int(lookback // step)
+    count = len(time_grid(start, end, step))
+    levels: list[float | None] = []
+    for index in range(-back, count):
+        ts = start + index * step
+        values = [
+            value
+            for item in ids
+            if (value := interpolate(series_by_id[item], ts, max_hold)) is not None
+        ]
+        levels.append(median(values) if values else None)
+    disturbed = set()
+    for index in range(count):
+        window = [value for value in levels[index : index + back + 1] if value is not None]
+        if len(window) >= 2 and max(window) - min(window) > 2 * tolerance:
+            disturbed.add(index)
+    return disturbed

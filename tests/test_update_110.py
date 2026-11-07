@@ -51,7 +51,7 @@ async def test_silent_sensor_blocks_settling_and_is_reported(hass, z2m, freezer)
     item = manager._run["result"]["temperature"]["sensors"][silent["device_id"]]
     assert item["status"] == "no_data"
     assert "temperature_calibration" not in z2m.config["devices"]["0x01"]
-    assert any("zu selten" in text for text in manager._run["warnings"])
+    assert any(item["key"] == "too_few_reports" for item in manager._run["warnings"])
 
 
 async def test_restored_state_after_restart_is_ignored(hass, z2m, freezer):

@@ -72,6 +72,11 @@ GRID_SECONDS = 300
 MAX_HOLD_SECONDS = int(2.5 * 3600)
 SILENT_SECONDS = 90 * 60
 MAX_GAP_SECONDS = 2 * 3600
+# Lüften, Kochen oder Heizung: schwankt der Bezugswert innerhalb von 45 Minuten
+# um mehr als zwei Toleranzen, zählen diese Rasterpunkte nicht.
+DISTURB_LOOKBACK_SECONDS = 45 * 60
+MAX_DISTURBED_MEASURE = 0.3
+MAX_DISTURBED_VERIFY = 0.5
 MIN_COVERAGE = 0.7
 NEW_DEVICE_DAYS = 14
 MAX_SAMPLES_PER_ENTITY = 3000

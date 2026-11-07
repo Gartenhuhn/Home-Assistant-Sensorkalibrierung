@@ -70,7 +70,7 @@ class Z2MBridge:
         try:
             payload = json.loads(message.payload)
         except ValueError:
-            _LOGGER.warning("bridge/devices konnte nicht gelesen werden")
+            _LOGGER.warning("Could not parse bridge/devices")
             return
         devices: dict[str, dict[str, Any]] = {}
         for device in payload:
@@ -95,7 +95,7 @@ class Z2MBridge:
         try:
             self.config = json.loads(message.payload).get("config") or {}
         except ValueError:
-            _LOGGER.warning("bridge/info konnte nicht gelesen werden")
+            _LOGGER.warning("Could not parse bridge/info")
             return
         if self.on_update:
             self.on_update()
@@ -144,11 +144,11 @@ class Z2MBridge:
             async with asyncio.timeout(Z2M_RESPONSE_TIMEOUT):
                 response = await future
         except TimeoutError as err:
-            raise Z2MError("Zigbee2MQTT hat nicht geantwortet") from err
+            raise Z2MError("no response") from err
         finally:
             self._pending.pop(transaction, None)
         if response.get("status") != "ok":
-            raise Z2MError(response.get("error") or "Zigbee2MQTT meldet einen Fehler")
+            raise Z2MError(response.get("error") or "error reported")
         data = response.get("data") or {}
         if isinstance(data.get("to"), dict) and self.config is not None:
             devices = self.config.setdefault("devices", {})

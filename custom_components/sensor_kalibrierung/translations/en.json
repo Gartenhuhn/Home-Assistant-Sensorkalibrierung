@@ -1,12 +1,13 @@
 {
+  "title": "Zigbee2MQTT Sensor Calibration",
   "config": {
     "abort": {
       "single_instance_allowed": "Sensor calibration is already set up."
     },
     "step": {
       "user": {
-        "title": "Zigbee2MQTT Sensor-Kalibrierung",
-        "description": "Calibrates sensors lying side by side. Use the card custom:sensor-kalibrierung-card.",
+        "title": "Zigbee2MQTT Sensor Calibration",
+        "description": "Calibrates Zigbee2MQTT sensors placed side by side. Add the card custom:sensor-kalibrierung-card to a dashboard.",
         "data": {
           "base_topic": "Zigbee2MQTT base topic"
         }
@@ -30,7 +31,11 @@
         "data_description": {
           "max_temperature_offset": "Larger deviations are only reported.",
           "measure_hours": "Applies to the normal calibration. Quick calibration always measures 2 hours.",
-          "notify_targets": "Reports the end of a run and sensors that stop reporting."
+          "notify_targets": "Reports the end of a run and sensors that stop reporting.",
+          "verify_hours": "Applies to the normal calibration. Quick calibration always verifies for 1 hour.",
+          "settle_max_hours": "Measuring starts after this time at the latest, even if not all sensors are stable.",
+          "max_humidity_offset": "Larger deviations are only reported.",
+          "max_pressure_offset": "Larger deviations are only reported."
         }
       }
     }
@@ -77,6 +82,48 @@
           },
           "mode": {
             "name": "Mode"
+          },
+          "last_outside_tolerance": {
+            "name": "Outside tolerance"
+          },
+          "last_rolled_back": {
+            "name": "Undone"
+          },
+          "temperature_max_before": {
+            "name": "Temperature largest distance before"
+          },
+          "temperature_max_after": {
+            "name": "Temperature largest distance after"
+          },
+          "humidity_max_before": {
+            "name": "Humidity largest distance before"
+          },
+          "humidity_max_after": {
+            "name": "Humidity largest distance after"
+          },
+          "pressure_max_before": {
+            "name": "Pressure largest distance before"
+          },
+          "pressure_max_after": {
+            "name": "Pressure largest distance after"
+          },
+          "temperature_spread_before": {
+            "name": "Temperature spread before"
+          },
+          "temperature_spread_after": {
+            "name": "Temperature spread after"
+          },
+          "humidity_spread_before": {
+            "name": "Humidity spread before"
+          },
+          "humidity_spread_after": {
+            "name": "Humidity spread after"
+          },
+          "pressure_spread_before": {
+            "name": "Pressure spread before"
+          },
+          "pressure_spread_after": {
+            "name": "Pressure spread after"
           }
         }
       }

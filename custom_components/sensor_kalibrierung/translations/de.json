@@ -1,4 +1,5 @@
 {
+  "title": "Zigbee2MQTT Sensor-Kalibrierung",
   "config": {
     "abort": {
       "single_instance_allowed": "Die Sensor-Kalibrierung ist bereits eingerichtet."
@@ -30,7 +31,11 @@
         "data_description": {
           "max_temperature_offset": "Größere Abweichungen werden nur gemeldet, nicht korrigiert.",
           "measure_hours": "Gilt für die normale Kalibrierung. Die Schnellkalibrierung misst immer 2 Stunden.",
-          "notify_targets": "Meldet das Ende eines Laufs und Sensoren, die sich nicht mehr melden."
+          "notify_targets": "Meldet das Ende eines Laufs und Sensoren, die sich nicht mehr melden.",
+          "verify_hours": "Gilt für die normale Kalibrierung. Die Schnellkalibrierung kontrolliert immer 1 Stunde.",
+          "settle_max_hours": "Spätestens danach beginnt das Messen, auch wenn noch nicht alle Sensoren stabil sind.",
+          "max_humidity_offset": "Größere Abweichungen werden nur gemeldet.",
+          "max_pressure_offset": "Größere Abweichungen werden nur gemeldet."
         }
       }
     }
@@ -77,6 +82,48 @@
           },
           "mode": {
             "name": "Art"
+          },
+          "last_outside_tolerance": {
+            "name": "Außerhalb der Toleranz"
+          },
+          "last_rolled_back": {
+            "name": "Zurückgenommen"
+          },
+          "temperature_max_before": {
+            "name": "Temperatur größter Abstand vorher"
+          },
+          "temperature_max_after": {
+            "name": "Temperatur größter Abstand nachher"
+          },
+          "humidity_max_before": {
+            "name": "Feuchte größter Abstand vorher"
+          },
+          "humidity_max_after": {
+            "name": "Feuchte größter Abstand nachher"
+          },
+          "pressure_max_before": {
+            "name": "Druck größter Abstand vorher"
+          },
+          "pressure_max_after": {
+            "name": "Druck größter Abstand nachher"
+          },
+          "temperature_spread_before": {
+            "name": "Temperatur Streuung vorher"
+          },
+          "temperature_spread_after": {
+            "name": "Temperatur Streuung nachher"
+          },
+          "humidity_spread_before": {
+            "name": "Feuchte Streuung vorher"
+          },
+          "humidity_spread_after": {
+            "name": "Feuchte Streuung nachher"
+          },
+          "pressure_spread_before": {
+            "name": "Druck Streuung vorher"
+          },
+          "pressure_spread_after": {
+            "name": "Druck Streuung nachher"
           }
         }
       }

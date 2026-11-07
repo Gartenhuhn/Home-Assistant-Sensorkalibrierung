@@ -51,6 +51,13 @@ class CalibrationStatusSensor(SensorEntity):
             "new_sensors",
             "mode",
             "silent",
+            "last_outside_tolerance",
+            "temperature_max_before",
+            "temperature_max_after",
+            "humidity_max_before",
+            "humidity_max_after",
+            "pressure_max_before",
+            "pressure_max_after",
         }
     )
 

@@ -1,5 +1,5 @@
 {
-  "name": "Zigbee2MQTT Sensor-Kalibrierung",
+  "name": "Zigbee2MQTT Sensor Calibration",
   "homeassistant": "2026.2.0",
   "render_readme": true
 }

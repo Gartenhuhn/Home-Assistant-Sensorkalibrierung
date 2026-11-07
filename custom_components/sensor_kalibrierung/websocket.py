@@ -67,7 +67,7 @@ async def ws_set_selection(
     """Speichert die Sensorauswahl."""
     manager = hass.data[DOMAIN].manager
     if manager is None:
-        connection.send_error(msg["id"], "not_loaded", "Nicht eingerichtet")
+        connection.send_error(msg["id"], "not_loaded", "Not set up")
         return
     try:
         references = msg.get("references")
@@ -91,7 +91,7 @@ async def _run_action(
     """Führt eine Aktion aus und meldet Fehler lesbar zurück."""
     manager = hass.data[DOMAIN].manager
     if manager is None:
-        connection.send_error(msg["id"], "not_loaded", "Nicht eingerichtet")
+        connection.send_error(msg["id"], "not_loaded", "Not set up")
         return
     try:
         await action(manager)

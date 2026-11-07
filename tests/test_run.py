@@ -235,7 +235,11 @@ async def test_full_run_corrects_sensors(hass, z2m, freezer):
     await hass.async_block_till_done()
     assert manager.phase == "preparing"
     assert z2m.config["devices"]["0x01"]["temperature_precision"] == 2
-    assert any("Batterie" in item for item in manager.snapshot()["warnings"])
+    battery = [
+        item for item in manager.snapshot()["warnings"] if item["key"] == "battery_low"
+    ]
+    assert battery[0]["params"] == {"name": "Klima Keller", "level": 0}
+    assert battery[0]["level"] == "warning"
 
     await z2m.run(freezer, 35)
     assert manager.phase == "settling"
@@ -257,7 +261,7 @@ async def test_full_run_corrects_sensors(hass, z2m, freezer):
     assert data["spread_after"] < 0.1
     notifications = persistent_notification._async_get_or_create_notifications(hass)
     assert DOMAIN in notifications
-    assert "zurückbringen" in notifications[DOMAIN]["message"]
+    assert "all within tolerance" in notifications[DOMAIN]["message"]
     assert snapshot["can_rollback"]
     dates = {
         item["name"]: item["last_calibrated"] for item in snapshot["candidates"]
@@ -290,7 +294,10 @@ async def test_outlier_is_only_reported(hass, z2m, freezer):
     await z2m.run(freezer, 6 * 60 + 5)
     assert manager.phase == "verifying"
     assert "temperature_calibration" not in z2m.config["devices"]["0x07"]
-    assert any("Defekt" in item for item in manager.snapshot()["warnings"])
+    assert any(
+        item["key"] == "outlier" and item["params"]["name"] == "Defekt"
+        for item in manager.snapshot()["warnings"]
+    )
 
 
 async def test_run_survives_reload(hass, z2m, freezer):

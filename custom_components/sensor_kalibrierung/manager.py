@@ -50,8 +50,11 @@ from .const import (
     DEFAULT_MEASURE_HOURS,
     DEFAULT_SETTLE_MAX_HOURS,
     DEFAULT_VERIFY_HOURS,
+    DISTURB_LOOKBACK_SECONDS,
     DOMAIN,
     GRID_SECONDS,
+    MAX_DISTURBED_MEASURE,
+    MAX_DISTURBED_VERIFY,
     MAX_GAP_SECONDS,
     MAX_HOLD_SECONDS,
     MAX_SAMPLES_PER_ENTITY,
@@ -91,6 +94,7 @@ from .const import (
     Quantity,
 )
 from .discovery import Candidate, battery_level, find_candidates, z2m_ieee
+from .messages import note, text
 from .z2m import Z2MBridge, Z2MError
 
 _LOGGER = logging.getLogger(__name__)
@@ -99,7 +103,6 @@ STORAGE_VERSION = 1
 OFFSET_EPSILON = 0.005
 OFFSET_MISSING = "missing"
 OFFSET_DIFFERS = "differs"
-TITLE = "Sensor-Kalibrierung"
 
 
 class CalibrationManager:
@@ -248,7 +251,7 @@ class CalibrationManager:
     ) -> None:
         """Speichert Auswahl, Referenzgruppe und Art der Kalibrierung."""
         if self._run:
-            raise HomeAssistantError("Während eines Laufs ist die Auswahl gesperrt")
+            raise HomeAssistantError(self._t("err_selection_locked"))
         self._selection = members
         if references is not None:
             self._references = [item for item in references if item in members]
@@ -256,7 +259,7 @@ class CalibrationManager:
             self._references = [item for item in self._references if item in members]
         if mode is not None:
             if mode not in MODES:
-                raise HomeAssistantError(f"Unbekannte Art: {mode}")
+                raise HomeAssistantError(self._t("err_unknown_mode", mode=mode))
             self._mode = mode
         await self._store.async_save(self._data())
         self._notify()
@@ -265,24 +268,24 @@ class CalibrationManager:
         """Startet einen neuen Lauf."""
         async with self._lock:
             if self._run:
-                raise HomeAssistantError("Es läuft bereits eine Kalibrierung")
+                raise HomeAssistantError(self._t("err_running"))
             candidates = self.candidates()
             selected = set(self._selected_ids(candidates))
             members = [item for item in candidates if item.member_id in selected]
             references = [item for item in self._references if item in selected]
             if len(members) < 2:
-                raise HomeAssistantError("Wähle mindestens zwei Sensoren aus")
+                raise HomeAssistantError(self._t("err_min_two"))
             if not any(
                 item.correctable and item.member_id not in references
                 for item in members
             ):
                 raise HomeAssistantError(
-                    "Keiner der gewählten Sensoren lässt sich korrigieren"
-                    if not references
-                    else "Neben der Referenz fehlt ein Sensor, der korrigiert wird"
+                    self._t(
+                        "err_only_references" if references else "err_none_correctable"
+                    )
                 )
             if not self.bridge.ready:
-                raise HomeAssistantError("Zigbee2MQTT ist noch nicht erreichbar")
+                raise HomeAssistantError(self._t("err_z2m_not_ready"))
             run = self._new_run(members, references)
             backup, changed = await self._prepare_devices(run)
             run["prepared_at"] = self._now()
@@ -299,10 +302,8 @@ class CalibrationManager:
         """Bricht einen Lauf ab, Offsets bleiben unverändert."""
         async with self._lock:
             if not self._run:
-                raise HomeAssistantError("Es läuft keine Kalibrierung")
-            await self._finish(
-                self._run, PHASE_CANCELLED, "Die Kalibrierung wurde abgebrochen."
-            )
+                raise HomeAssistantError(self._t("err_not_running"))
+            await self._finish(self._run, PHASE_CANCELLED, "cancelled")
 
     async def async_dismiss(self) -> None:
         """Schließt die Ergebnisansicht, das Ergebnis bleibt abrufbar."""
@@ -315,19 +316,19 @@ class CalibrationManager:
         """Stellt die Optionen von vor dem letzten Lauf wieder her."""
         async with self._lock:
             if self._run:
-                raise HomeAssistantError("Zuerst den laufenden Durchgang abbrechen")
+                raise HomeAssistantError(self._t("err_cancel_first"))
             if not self._backup:
-                raise HomeAssistantError("Es gibt nichts wiederherzustellen")
+                raise HomeAssistantError(self._t("err_nothing_to_undo"))
             failed = []
             for ieee, item in self._backup["devices"].items():
                 try:
                     await self.bridge.async_set_options(ieee, dict(item["options"]))
                 except Z2MError as err:
-                    _LOGGER.warning("Rückgängig für %s fehlgeschlagen: %s", ieee, err)
+                    _LOGGER.warning("Undo failed for %s: %s", ieee, err)
                     failed.append(item["name"])
             if failed:
                 raise HomeAssistantError(
-                    "Nicht wiederhergestellt: " + ", ".join(failed)
+                    self._t("err_not_restored", names=", ".join(failed))
                 )
             self._calibrations = self._backup.get("calibrations") or {}
             self._backup = None
@@ -340,7 +341,7 @@ class CalibrationManager:
         """Schreibt gespeicherte Offsets erneut, etwa nach einem Zurücksetzen."""
         async with self._lock:
             if self._run:
-                raise HomeAssistantError("Während eines Laufs nicht möglich")
+                raise HomeAssistantError(self._t("err_during_run"))
             candidates = [
                 item
                 for item in self.candidates()
@@ -354,18 +355,18 @@ class CalibrationManager:
                 and self._calibrations.get(item.key, {}).get("offsets")
             ]
             if not todo:
-                raise HomeAssistantError("Für diese Sensoren ist nichts gespeichert")
+                raise HomeAssistantError(self._t("err_nothing_stored"))
             failed = []
             for item in todo:
                 options = self._restore_options(item)
                 try:
                     await self.bridge.async_set_options(item.ieee, options)
                 except Z2MError as err:
-                    _LOGGER.warning("Wiederherstellen für %s: %s", item.name, err)
+                    _LOGGER.warning("Restoring offsets failed for %s: %s", item.name, err)
                     failed.append(item.name)
             if failed:
                 raise HomeAssistantError(
-                    "Nicht wiederhergestellt: " + ", ".join(failed)
+                    self._t("err_not_restored", names=", ".join(failed))
                 )
         self._notify()
 
@@ -386,24 +387,24 @@ class CalibrationManager:
         async with self._lock:
             last = self._last
             if self._run:
-                raise HomeAssistantError("Während eines Laufs nicht möglich")
+                raise HomeAssistantError(self._t("err_during_run"))
             if not last or last.get("rolled_back") or not self._backup:
-                raise HomeAssistantError("Das letzte Ergebnis ist nicht mehr aktiv")
+                raise HomeAssistantError(self._t("err_last_inactive"))
             data = (last.get("result") or {}).get(key)
             item = (data or {}).get("sensors", {}).get(member_id)
             if not item or item["status"] != STATUS_OUTLIER or item["applied"]:
-                raise HomeAssistantError("Dieser Wert kann nicht übernommen werden")
+                raise HomeAssistantError(self._t("err_cannot_adopt"))
             info = self._member_info(last, member_id)
             ieee = info["ieee"]
             if not ieee or ieee not in self._backup["devices"]:
-                raise HomeAssistantError("Für diesen Sensor fehlt die Sicherung")
+                raise HomeAssistantError(self._t("err_no_backup"))
             option = QUANTITIES[key].calibration_option
             try:
                 await self.bridge.async_set_options(
                     ieee, {option: item["new_offset"]}
                 )
             except Z2MError as err:
-                raise HomeAssistantError(f"Zigbee2MQTT: {err}") from err
+                raise HomeAssistantError(self._t("err_z2m", error=err)) from err
             item["applied"] = True
             item["manual"] = True
             self._record_calibration(
@@ -437,6 +438,10 @@ class CalibrationManager:
         }
 
     # Ablauf
+
+    def _t(self, key: str, **params: Any) -> str:
+        """Text in der Sprache von Home Assistant."""
+        return text(self.hass, key, **params)
 
     def _now(self) -> float:
         """Aktuelle Zeit als Zeitstempel."""
@@ -501,9 +506,7 @@ class CalibrationManager:
             }
             level = battery_level(self.hass, item.battery_entity)
             if level is not None and level <= BATTERY_WARN_PERCENT:
-                warnings.append(
-                    f"{item.name}: Batterie {level:.0f} %, die Werte können driften."
-                )
+                warnings.append(note("battery_low", name=item.name, level=round(level)))
         return {
             "id": uuid4().hex,
             "mode": self._mode,
@@ -571,19 +574,16 @@ class CalibrationManager:
                         if item.precision_option in wanted
                     )
             except Z2MError as err:
-                _LOGGER.warning("Optionen für %s: %s", member["name"], err)
+                _LOGGER.warning("Setting options failed for %s: %s", member["name"], err)
                 member["correctable"] = []
-                run["warnings"].append(
-                    f"{member['name']}: Zigbee2MQTT reagiert nicht, "
-                    "der Sensor wird nur verglichen."
-                )
+                run["warnings"].append(note("z2m_no_response", name=member["name"]))
                 continue
             backup["devices"][ieee] = {
                 "name": member["name"],
                 "options": {key: current.get(key) for key in keys},
             }
         if not backup["devices"]:
-            raise HomeAssistantError("Zigbee2MQTT hat keine Änderung bestätigt")
+            raise HomeAssistantError(self._t("err_z2m_no_confirm"))
         return backup, changed
 
     def _sample_value(self, run: dict[str, Any], entity_id: str, state: Any) -> float | None:
@@ -776,11 +776,9 @@ class CalibrationManager:
                     member["correctable"].remove(key)
             if not member["entities"]:
                 member["active"] = False
-                run["warnings"].append(
-                    f"{member['name']}: keine Meldung erhalten, Sensor ausgelassen."
-                )
+                run["warnings"].append(note("no_report", name=member["name"]))
         if len(self._active(run)) < 2:
-            await self._fail(run, "Es melden sich zu wenige Sensoren.")
+            await self._fail(run, "failed_few")
             return
         await self._set_phase(run, PHASE_SETTLING)
 
@@ -820,9 +818,7 @@ class CalibrationManager:
         if ready or elapsed >= run["settle_max_seconds"]:
             if unstable:
                 names = ", ".join(run["members"][item]["name"] for item in unstable)
-                run["warnings"].append(
-                    f"Noch nicht stabil nach maximaler Wartezeit: {names}."
-                )
+                run["warnings"].append(note("not_stable", names=names))
             run["measure_start"] = now
             run["measure_end"] = now + run["measure_seconds"]
             await self._set_phase(run, PHASE_MEASURING)
@@ -837,15 +833,63 @@ class CalibrationManager:
         names = ", ".join(run["members"][item]["name"] for item in new)
         minutes = SILENT_SECONDS // 60
         await self._send(
-            f"{names}: seit über {minutes} Minuten keine Meldung. Prüfe die "
-            "Zigbee-Verbindung, zum Beispiel mit einem kurzen Druck auf die Taste. "
-            "Die Kalibrierung wartet so lange.",
-            f"{DOMAIN}_silent",
+            self._t("silent", names=names, minutes=minutes), f"{DOMAIN}_silent"
         )
 
+    def _disturbed(
+        self,
+        run: dict[str, Any],
+        key: str,
+        series: dict[str, list[list[float]]],
+        start: float,
+        end: float,
+        ids: list[str],
+    ) -> set[int]:
+        """Rasterpunkte, an denen sich der Raum schnell verändert hat."""
+        return analysis.disturbed_points(
+            series,
+            start,
+            end,
+            level_ids=ids,
+            tolerance=QUANTITIES[key].tolerance,
+            step=GRID_SECONDS,
+            max_hold=MAX_HOLD_SECONDS,
+            lookback=DISTURB_LOOKBACK_SECONDS,
+        )
+
+    def _disturbed_share(
+        self, run: dict[str, Any], start: float, end: float, keys: list[str]
+    ) -> float:
+        """Größter Anteil gestörter Rasterpunkte über die Messgrößen."""
+        total = len(analysis.time_grid(start, end, GRID_SECONDS)) or 1
+        share = 0.0
+        for key in keys:
+            series = self._series(run, key)
+            ids = self._reference_ids(run, key) or self._group_ids(run, key)
+            if len(series) < 2 or not ids:
+                continue
+            skip = self._disturbed(run, key, series, start, end, ids)
+            share = max(share, len(skip) / total)
+        return share
+
     async def _step_measuring(self, run: dict[str, Any]) -> None:
-        """Wertet nach Ablauf der Messzeit aus."""
+        """Wertet nach Ablauf der Messzeit aus.
+
+        War der Raum zu oft unruhig, wird die Messung einmal verlängert.
+        """
         if self._now() < run["measure_end"]:
+            return
+        keys = [key for key in QUANTITIES if self._group_ids(run, key)]
+        share = self._disturbed_share(
+            run, run["measure_start"], run["measure_end"], keys
+        )
+        if share > MAX_DISTURBED_MEASURE and not run.get("measure_extended"):
+            extra = max(run["measure_seconds"] / 2, 3600)
+            run["measure_end"] += extra
+            run["measure_extended"] = True
+            run["warnings"].append(
+                note("measure_extended", info=True, minutes=round(extra / 60))
+            )
             return
         run["result"] = self._evaluate(run)
         await self._set_phase(run, PHASE_APPLYING)
@@ -886,16 +930,21 @@ class CalibrationManager:
             references = [
                 item for item in self._reference_ids(run, key) if item not in silent
             ]
+            group = self._group_ids(run, key)
+            skip = self._disturbed(
+                run, key, usable_series, start, end, references or group
+            )
             stats = analysis.analyse_window(
                 usable_series,
                 start,
                 end,
-                group_ids=self._group_ids(run, key),
+                group_ids=group,
                 reference_ids=references,
                 step=GRID_SECONDS,
                 max_hold=MAX_HOLD_SECONDS,
                 min_points=MIN_WINDOW_POINTS,
                 min_coverage=MIN_COVERAGE,
+                skip=skip,
             )
             sensors: dict[str, Any] = {}
             for member in self._active(run):
@@ -903,8 +952,7 @@ class CalibrationManager:
                     continue
                 if member["id"] in silent:
                     run["warnings"].append(
-                        f"{member['name']}: {quantity.label} hat beim Messen zu "
-                        "selten gemeldet, nicht korrigiert."
+                        note("too_few_reports", name=member["name"], quantity=key)
                     )
                 sensors[member["id"]] = self._rate_sensor(
                     run, member, key, quantity, stats.get(member["id"]), references
@@ -914,13 +962,23 @@ class CalibrationManager:
                 for item in sensors.values()
                 if item["status"] in (STATUS_OK, STATUS_REFERENCE)
             ]
+            corrected = [
+                abs(item["deviation"])
+                for item in sensors.values()
+                if item["status"] == STATUS_OK
+            ]
             result[key] = {
                 "label": quantity.label,
                 "unit": quantity.unit,
+                "tolerance": quantity.tolerance,
                 "references": references,
                 "sensors": sensors,
                 "spread_before": _round(analysis.spread(usable)),
                 "spread_after": None,
+                "max_before": _round(max(corrected)) if corrected else None,
+                "max_after": None,
+                "outside": [],
+                "checked": False,
             }
         return result
 
@@ -961,14 +1019,16 @@ class CalibrationManager:
         item["new_offset"] = round(old + correction, 2)
         if abs(stats.drift) > 2 * quantity.tolerance:
             item["status"] = STATUS_UNSTABLE
-            run["warnings"].append(
-                f"{member['name']}: {quantity.label} driftet noch, nicht korrigiert."
-            )
+            run["warnings"].append(note("drifting", name=member["name"], quantity=key))
         elif abs(correction) > run["limits"][key]:
             item["status"] = STATUS_OUTLIER
             run["warnings"].append(
-                f"{member['name']}: {quantity.label} weicht um "
-                f"{stats.deviation:+.2f} {quantity.unit} ab, nicht korrigiert."
+                note(
+                    "outlier",
+                    name=member["name"],
+                    quantity=key,
+                    deviation=round(stats.deviation, 2),
+                )
             )
         else:
             item["status"] = STATUS_OK
@@ -987,7 +1047,7 @@ class CalibrationManager:
             try:
                 await self.bridge.async_set_options(member["ieee"], options)
             except Z2MError as err:
-                _LOGGER.warning("Offset für %s: %s", member["name"], err)
+                _LOGGER.warning("Writing offset failed for %s: %s", member["name"], err)
                 continue
             for data in run["result"].values():
                 item = data["sensors"].get(member_id)
@@ -1010,8 +1070,7 @@ class CalibrationManager:
             return
         for member_id in sorted(set(remaining)):
             run["warnings"].append(
-                f"{run['members'][member_id]['name']}: Offset konnte nicht "
-                "geschrieben werden."
+                note("write_failed", name=run["members"][member_id]["name"])
             )
         applied = [
             item
@@ -1020,11 +1079,7 @@ class CalibrationManager:
             if item["applied"]
         ]
         if not applied:
-            await self._finish(
-                run,
-                PHASE_DONE,
-                "Es wurde kein Offset gesetzt. Die Hinweise nennen den Grund.",
-            )
+            await self._finish(run, PHASE_DONE, "done_none")
             return
         run["applied_at"] = self._now()
         await self._set_phase(run, PHASE_VERIFYING)
@@ -1054,6 +1109,41 @@ class CalibrationManager:
             return
         if now < run["verify_end"]:
             return
+        checked = self._check(run)
+        if not checked and not run.get("verify_extended"):
+            run["verify_start"] = now
+            run["verify_end"] = now + run["verify_seconds"]
+            run["verify_extended"] = True
+            run["warnings"].append(
+                note(
+                    "verify_extended",
+                    info=True,
+                    minutes=round(run["verify_seconds"] / 60),
+                )
+            )
+            return
+        for key, data in run["result"].items():
+            if not data["checked"] and any(
+                item["applied"] for item in data["sensors"].values()
+            ):
+                run["warnings"].append(note("verify_disturbed", quantity=key))
+            if data["outside"]:
+                names = ", ".join(
+                    run["members"][item]["name"] for item in data["outside"]
+                )
+                run["warnings"].append(
+                    note(
+                        "outside_tolerance",
+                        names=names,
+                        quantity=key,
+                        tolerance=data["tolerance"],
+                    )
+                )
+        await self._finish(run, PHASE_DONE, "done")
+
+    def _check(self, run: dict[str, Any]) -> bool:
+        """Wertet die Kontrolle aus. False, wenn sie zu unruhig war."""
+        all_checked = True
         for key, data in run["result"].items():
             references = data.get("references") or []
             ids = [
@@ -1061,35 +1151,56 @@ class CalibrationManager:
                 for member_id, item in data["sensors"].items()
                 if item["applied"] or item["status"] == STATUS_REFERENCE
             ]
-            stats = analysis.analyse_window(
-                self._series(run, key, since=run["applied_at"]),
+            applied = [
+                member_id
+                for member_id, item in data["sensors"].items()
+                if item["applied"]
+            ]
+            series = self._series(run, key, since=run["applied_at"])
+            group = [item for item in ids if item not in references]
+            skip = self._disturbed(
+                run,
+                key,
+                series,
                 run["verify_start"],
                 run["verify_end"],
-                group_ids=[item for item in ids if item not in references],
-                reference_ids=references,
-                step=GRID_SECONDS,
-                max_hold=MAX_HOLD_SECONDS,
-                min_points=MIN_WINDOW_POINTS,
+                references or group,
             )
+            total = len(
+                analysis.time_grid(run["verify_start"], run["verify_end"], GRID_SECONDS)
+            )
+            stats = {}
+            if len(skip) <= MAX_DISTURBED_VERIFY * total:
+                stats = analysis.analyse_window(
+                    series,
+                    run["verify_start"],
+                    run["verify_end"],
+                    group_ids=group,
+                    reference_ids=references,
+                    step=GRID_SECONDS,
+                    max_hold=MAX_HOLD_SECONDS,
+                    min_points=MIN_WINDOW_POINTS,
+                    skip=skip,
+                )
             for member_id, item in data["sensors"].items():
-                if member_id in stats:
-                    item["after"] = round(stats[member_id].deviation, 2)
+                item["after"] = (
+                    round(stats[member_id].deviation, 2) if member_id in stats else None
+                )
             data["spread_after"] = _round(
-                analysis.spread(
-                    stats[item].deviation for item in ids if item in stats
-                )
+                analysis.spread(stats[item].deviation for item in ids if item in stats)
             )
-            before, after = data["spread_before"], data["spread_after"]
-            if before is not None and after is not None and after > before:
-                run["warnings"].append(
-                    f"{data['label']}: Die Streuung ist nicht kleiner geworden. "
-                    "Prüfe die Werte oder mache die Änderung rückgängig."
-                )
-        await self._finish(
-            run,
-            PHASE_DONE,
-            "Die Kalibrierung ist fertig. Du kannst die Sensoren zurückbringen.",
-        )
+            after = [abs(stats[item].deviation) for item in applied if item in stats]
+            data["max_after"] = _round(max(after)) if after else None
+            data["outside"] = [
+                item
+                for item in applied
+                if item in stats
+                and abs(stats[item].deviation) > QUANTITIES[key].tolerance
+            ]
+            data["checked"] = bool(applied) and all(item in stats for item in applied)
+            if applied and not data["checked"]:
+                all_checked = False
+        return all_checked
 
     async def _finish(self, run: dict[str, Any], outcome: str, message: str) -> None:
         """Beendet einen Lauf und behält nur die Zusammenfassung."""
@@ -1114,6 +1225,7 @@ class CalibrationManager:
             },
             "references": run.get("references", []),
             "result": run.get("result"),
+            "summary": self._summary_data(run),
             "warnings": run["warnings"],
             "dismissed": False,
             "rolled_back": False,
@@ -1123,33 +1235,73 @@ class CalibrationManager:
         await self._store.async_save(self._data())
         self._notify()
         if outcome != PHASE_CANCELLED:
-            await self._send(self._summary(message, run), DOMAIN)
+            await self._send(self._summary_text(message, run), DOMAIN)
 
-    def _summary(self, message: str, run: dict[str, Any]) -> str:
-        """Text der Abschlussmeldung."""
-        lines = [message]
-        for data in (run.get("result") or {}).values():
-            before, after = data["spread_before"], data["spread_after"]
-            if before is not None and after is not None:
-                lines.append(
-                    f"{data['label']}: Streuung {before:.2f} → {after:.2f} {data['unit']}"
-                )
-        lines.extend(run["warnings"])
-        return "\n".join(lines)
+    def _summary_data(self, run: dict[str, Any]) -> dict[str, Any]:
+        """Zählt korrigierte Sensoren und solche außerhalb der Toleranz."""
+        result = run.get("result") or {}
+        corrected = {
+            member_id
+            for data in result.values()
+            for member_id, item in data["sensors"].items()
+            if item["applied"]
+        }
+        outside = {
+            member_id for data in result.values() for member_id in data.get("outside", [])
+        }
+        checked = all(
+            data.get("checked", False)
+            for data in result.values()
+            if any(item["applied"] for item in data["sensors"].values())
+        )
+        return {
+            "corrected": len(corrected),
+            "outside": len(outside),
+            "checked": checked,
+        }
 
-    async def _send(self, text: str, notification_id: str) -> None:
+    def _summary_text(self, message: str, run: dict[str, Any]) -> str:
+        """Kurzer Text der Abschlussmeldung in der Sprache von Home Assistant."""
+        summary = self._summary_data(run)
+        if message != "done":
+            line = self._t(message)
+        elif summary["outside"]:
+            line = self._t(
+                "done_outside", count=summary["corrected"], outside=summary["outside"]
+            )
+        elif not summary["checked"]:
+            line = self._t("done_unchecked", count=summary["corrected"])
+        elif summary["corrected"] == 1:
+            line = self._t("done_ok_one")
+        else:
+            line = self._t("done_ok", count=summary["corrected"])
+        notes = [
+            item
+            for item in run["warnings"]
+            if not isinstance(item, dict) or item.get("level") != "info"
+        ]
+        if notes:
+            line += " " + (
+                self._t("notes_one")
+                if len(notes) == 1
+                else self._t("notes", count=len(notes))
+            )
+        return line
+
+    async def _send(self, message: str, notification_id: str) -> None:
         """Meldet etwas per Benachrichtigung und an die gewählten Geräte."""
+        title = self._t("title")
         persistent_notification.async_create(
-            self.hass, text, TITLE, notification_id=notification_id
+            self.hass, message, title, notification_id=notification_id
         )
         for target in self._option(CONF_NOTIFY_TARGETS, []):
             service = target.removeprefix("notify.")
             try:
                 await self.hass.services.async_call(
-                    "notify", service, {"title": TITLE, "message": text}
+                    "notify", service, {"title": title, "message": message}
                 )
             except HomeAssistantError as err:
-                _LOGGER.warning("Benachrichtigung %s: %s", target, err)
+                _LOGGER.warning("Notification to %s failed: %s", target, err)
 
     # Anzeige
 
@@ -1201,8 +1353,8 @@ class CalibrationManager:
             return run.get("verify_end")
         return None
 
-    def _message(self, run: dict[str, Any]) -> str:
-        """Beschreibt den aktuellen Stand in einem Satz."""
+    def _message(self, run: dict[str, Any]) -> dict[str, Any]:
+        """Beschreibt den aktuellen Stand, die Kachel setzt den Text."""
         phase = run["phase"]
         active = self._active(run)
         if phase == PHASE_PREPARING:
@@ -1211,23 +1363,19 @@ class CalibrationManager:
                 for member in active
                 if all(run["samples"].get(e) for e in member["entities"].values())
             )
-            text = f"{ready} von {len(active)} Sensoren haben sich gemeldet."
-            if ready == len(active):
-                text += " In wenigen Minuten geht es weiter."
-            return text
+            key = "prep_all" if ready == len(active) else "prep"
+            return {"key": key, "params": {"ready": ready, "total": len(active)}}
         if phase == PHASE_SETTLING:
             stable = len(active) - len(run["unstable"])
-            text = f"{stable} von {len(active)} Sensoren sind stabil."
-            if run.get("silent"):
-                text += " Mindestens ein Sensor meldet sich nicht."
-            return text
+            key = "settle_silent" if run.get("silent") else "settle"
+            return {"key": key, "params": {"stable": stable, "total": len(active)}}
         if phase == PHASE_MEASURING:
-            return "Alle Sensoren werden verglichen. Du musst nichts tun."
+            return {"key": "measuring", "params": {}}
         if phase == PHASE_APPLYING:
-            return "Die neuen Offsets werden gesetzt."
+            return {"key": "applying", "params": {}}
         if "verify_start" not in run:
-            return "Warte auf die ersten korrigierten Werte."
-        return "Die neuen Offsets werden kontrolliert."
+            return {"key": "verify_wait", "params": {}}
+        return {"key": "verifying", "params": {}}
 
     def _sensor_rows(self, run: dict[str, Any]) -> list[dict[str, Any]]:
         """Bereitet die Sensoren eines Laufs für die Kachel auf."""
@@ -1393,6 +1541,9 @@ class CalibrationManager:
             for key, data in (last.get("result") or {}).items():
                 attributes[f"{key}_spread_before"] = data["spread_before"]
                 attributes[f"{key}_spread_after"] = data["spread_after"]
+                if data.get("references"):
+                    attributes[f"{key}_max_before"] = data.get("max_before")
+                    attributes[f"{key}_max_after"] = data.get("max_after")
             attributes["last_corrected"] = sorted(
                 {
                     last["names"].get(member_id, member_id)
@@ -1401,7 +1552,16 @@ class CalibrationManager:
                     if item["applied"]
                 }
             )
-            attributes["last_warnings"] = len(last.get("warnings") or [])
+            attributes["last_warnings"] = len(
+                [
+                    item
+                    for item in last.get("warnings") or []
+                    if not isinstance(item, dict) or item.get("level") != "info"
+                ]
+            )
+            attributes["last_outside_tolerance"] = (last.get("summary") or {}).get(
+                "outside"
+            )
         if self._run is None:
             candidates = self.candidates()
             attributes["offsets_missing"] = sorted(

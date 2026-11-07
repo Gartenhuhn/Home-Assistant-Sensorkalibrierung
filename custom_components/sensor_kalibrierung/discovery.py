@@ -39,6 +39,9 @@ EXCLUDED_WORDS = (
     "heizung",
     "boiler",
     "wasser",
+    "heating",
+    "water",
+    "setpoint",
 )
 
 

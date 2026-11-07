@@ -1,98 +1,111 @@
-# Zigbee2MQTT Sensor-Kalibrierung für Home Assistant
+# Zigbee2MQTT Sensor Calibration for Home Assistant
 
-Gleicht Sensoren ab, die nebeneinanderliegen. Danach zeigen sie vergleichbare Werte. Die Integration nutzt die Kalibrier-Optionen von Zigbee2MQTT und bringt eine eigene Kachel mit.
+[Deutsche Anleitung](README.de.md)
 
-Korrigiert werden nur Sensoren, die über Zigbee2MQTT laufen. Andere Sensoren, auch aus ZHA oder deCONZ, können als Vergleich oder Referenz mitmessen.
+Place your temperature and humidity sensors side by side, press start, and come back a few hours later. The integration finds out how far each sensor is off and writes the correction into the sensor's Zigbee2MQTT calibration options. Afterwards all sensors show comparable values again.
+
+It ships with its own dashboard card and needs no other extensions.
+
+<p>
+  <img src="docs/en-selection.png" width="32%" alt="Selecting sensors">
+  <img src="docs/en-running.png" width="32%" alt="Calibration running">
+  <img src="docs/en-result.png" width="32%" alt="Result with before and after">
+</p>
+
+## What it does
+
+- **Corrects** temperature, humidity and pressure of Zigbee2MQTT sensors that offer `temperature_calibration`, `humidity_calibration` or `pressure_calibration`, for example Aqara WSDCGQ11LM, Hue motion sensors and many smoke detectors.
+- **Compares** any other temperature or humidity sensor in Home Assistant (ZHA, deCONZ, Wi-Fi, thermostats). These can take part as comparison or reference, but are never changed.
+- **Runs on its own**: waits until all sensors have adapted, measures, writes the offsets and checks the result. Restarting Home Assistant in between does no harm.
+- **Ignores unsettled phases**: airing, cooking or heating changes all sensors at once. Such periods are left out, and measuring or checking is extended once if needed.
+- **Keeps a backup**: the previous offsets can be restored with one tap.
+
+## Requirements
+
+- Home Assistant 2026.2 or newer
+- Zigbee2MQTT with the MQTT integration and Home Assistant discovery enabled
 
 ## Installation
 
-### Über HACS
+### HACS or Marketplace
 
-1. In HACS oben rechts das Menü öffnen, **Benutzerdefinierte Repositories** wählen.
-2. `https://github.com/Gartenhuhn/Home-Assistant-Sensorkalibrierung` eintragen, Typ **Integration**.
-3. **Zigbee2MQTT Sensor-Kalibrierung** herunterladen und Home Assistant neu starten.
-4. Weiter mit Schritt 3 unten.
+1. Open HACS (since Home Assistant 2026.11: **Settings > Marketplace**) and choose **Custom repositories** from the menu in the top right.
+2. Add `https://github.com/Gartenhuhn/Home-Assistant-Sensorkalibrierung` as type **Integration**.
+3. Download **Zigbee2MQTT Sensor Calibration** and restart Home Assistant.
+4. Continue with step 3 below.
 
-### Von Hand
+### Manually
 
-1. Den Ordner `custom_components/sensor_kalibrierung` nach `/config/custom_components/` kopieren.
-2. Home Assistant neu starten.
-3. Unter **Einstellungen > Geräte & Dienste** die Integration **Zigbee2MQTT Sensor-Kalibrierung** hinzufügen.
-4. Im Dashboard eine Kachel vom Typ `custom:sensor-kalibrierung-card` anlegen. Falls sie fehlt, die Seite neu laden.
+1. Copy the folder `custom_components/sensor_kalibrierung` to `/config/custom_components/`.
+2. Restart Home Assistant.
+3. Add the integration **Zigbee2MQTT Sensor Calibration** under **Settings > Devices & services**.
+4. Add a card of type `custom:sensor-kalibrierung-card` to a dashboard. If it is missing, reload the page.
 
-## Ablauf
+## How a run works
 
-1. **Sensoren auswählen und zusammenlegen.** Alle angehakten Sensoren müssen am selben Platz liegen, ruhig und ohne Sonne, Zugluft oder Heizung in der Nähe. Nicht angehakte Sensoren bleiben unverändert.
-2. **Art wählen.** *Normal* passt für alle Sensoren. *Schnell* passt für Sensoren, die sich rasch angleichen, etwa Aqara.
-3. **Start drücken.** Das Tool sichert die alten Optionen und stellt die Nachkommastellen ein. Es prüft auch Batterie und erste Meldungen.
-4. **Angleichen.** Es wartet, bis die Abstände zwischen den Sensoren stabil sind.
-5. **Messen.** Es vergleicht die Sensoren.
-6. **Korrigieren und kontrollieren.** Es setzt die neuen Offsets und prüft das Ergebnis.
-7. **Zurückbringen.** Die Kachel meldet das Ende. Eine Benachrichtigung kommt ebenfalls.
+1. **Select and place the sensors.** All ticked sensors must lie close together in a calm spot, away from sun, draughts and heating. Unticked sensors stay unchanged.
+2. **Choose a mode.** *Normal* works for every sensor. *Quick* is enough for sensors that adapt fast, such as Aqara.
+3. **Start.** The integration backs up the current options and sets two decimal places.
+4. **Settle.** It waits until the distances between the sensors stop changing.
+5. **Measure.** It compares the sensors.
+6. **Correct and verify.** It writes the new offsets and checks the result.
+7. **Put back.** The card and a notification report the end.
 
-| | Normal | Schnell |
+| | Normal | Quick |
 |---|---|---|
-| Angleichen | 2 bis 8 Stunden | 1 bis 4 Stunden |
-| Messen | 4 Stunden | 2 Stunden |
-| Kontrolle | 2 Stunden | 1 Stunde |
-| Gesamt | 8 bis 14 Stunden | 4 bis 7 Stunden |
+| Settle | 2 to 8 hours | 1 to 4 hours |
+| Measure | 4 hours | 2 hours |
+| Verify | 2 hours | 1 hour |
+| Total | 8 to 14 hours | 4 to 7 hours |
 
-Die Zeiten für *Normal* und die Grenzen stehen in den Optionen der Integration. Bis Version 1.0 waren es 6 Stunden Messen und 3 Stunden Kontrolle. Bestehende Einstellungen bleiben beim Update erhalten.
+The times for *Normal*, the largest automatic correction and the notification targets are in the integration options. The question mark in the card opens a short guide that also explains every indicator and note.
 
-Das Fragezeichen oben rechts in der Kachel öffnet eine Kurzanleitung. Sie erklärt auch alle Anzeigen, Status und Hinweise.
+## New and reset sensors
 
-## Neue und zurückgesetzte Sensoren
+- **New sensors** are marked *New* in the card for 14 days until they are calibrated.
+- **Reference:** place two or three calibrated sensors next to the new ones and tick them under *Reference*. They are selected automatically and not changed. The new sensors are matched to the reference average. Without a reference the group average counts.
+- **Reset sensors:** offsets are stored per IEEE address. If Zigbee2MQTT loses them, for example after removing and re-pairing a device, the card shows *Offsets missing*. **Write back stored offsets** restores them without measuring again.
 
-- **Neue Sensoren** tragen in der Kachel 14 Tage lang die Markierung *Neu*, bis sie kalibriert sind.
-- **Referenz:** Zwei oder drei bereits kalibrierte Sensoren dazulegen und unter *Referenz* anhaken. Oben müssen sie nicht extra angehakt werden. Sie werden nicht verändert. Die anderen werden an deren Mittelwert angeglichen. Ohne Referenz zählt der Mittelwert der Gruppe.
-- **Zurückgesetzte Sensoren:** Die Offsets werden je IEEE-Adresse gespeichert. Fehlen sie in Zigbee2MQTT, zeigt die Kachel *Offsets fehlen*. **Gespeicherte Offsets zurückschreiben** stellt sie wieder her, ohne neue Messung.
+## Result
 
-## Rechenweg
+The result shows the spread before and after, or with a reference the largest distance to the reference. A chart shows each sensor before (ring) and after (dot) the correction, with the tolerance as green lines:
 
-Die Meldungen jedes Sensors werden auf ein 5-Minuten-Raster interpoliert. Pro Rasterpunkt zählt der Abstand zum Median der Gruppe oder zum Median der Referenzsensoren. Das Ergebnis je Sensor ist der Median dieser Abstände. Ändert sich die Raumtemperatur, betrifft das alle Sensoren gleich.
+| | Tolerance |
+|---|---|
+| Temperature | ±0.25 °C |
+| Humidity | ±1 % |
+| Pressure | ±0.3 hPa |
 
-Bestehende Offsets bleiben während der Messung aktiv. Der neue Offset ist der alte Offset plus die Korrektur.
+Sensors outside the tolerance after the correction are listed as a note. The last result can be reopened at any time with **Result**. **Undo** restores offsets, precision and calibration dates from before the last run.
 
-## Sensoren ohne Meldung
+## How it calculates
 
-- Gezählt werden auch Meldungen mit gleichem Wert.
-- Ein Wert nach einem Neustart zählt erst, wenn sich der Messwert wirklich ändert. Zigbee2MQTT sendet nach einem Neustart den letzten bekannten Wert erneut, auch wenn der Sensor keine Verbindung hat.
-- Meldet sich ein Sensor 90 Minuten nicht, wartet das Angleichen auf ihn. Eine Benachrichtigung geht raus.
-- Fehlen beim Messen mehr als 2 Stunden am Stück, wird der Sensor nicht korrigiert.
+Each sensor's reports are interpolated onto a 5-minute grid. At every grid point the distance to the median of the group, or of the reference sensors, counts. A sensor's result is the median of these distances, so a changing room temperature affects all sensors equally. Grid points where the whole room changes quickly are left out.
 
-## Was das Tool nicht korrigiert
+Existing offsets stay active while measuring. The new offset is the old offset plus the correction.
 
-- **Ausreißer:** Größere Abweichungen als in den Optionen eingestellt werden nur gemeldet, ab Werk 3 °C, 10 % und 5 hPa. Im Ergebnis lässt sich der Wert mit **Trotzdem übernehmen** setzen. Rückgängig nimmt auch das zurück.
-- **Instabile Sensoren:** Driftet ein Sensor während der Messung, bleibt sein Offset unverändert.
-- **Sensoren außerhalb von Zigbee2MQTT:** Sie dienen nur zum Vergleich oder als Referenz.
+## What is not corrected
 
-## Ergebnis
+- **Outliers:** corrections larger than the limits in the options (default 3 °C, 10 %, 5 hPa) are only reported. They can be applied in the result with **Apply**; **Undo** reverts that too.
+- **Unstable sensors:** if a sensor drifts during the measurement, its offset stays unchanged.
+- **Silent sensors:** sensors with more than 2 hours without a report while measuring are not corrected. A sensor that is silent for 90 minutes holds up settling and triggers a notification.
+- **Sensors outside Zigbee2MQTT:** comparison or reference only.
 
-Die Ergebnisansicht zeigt die Streuung vorher und nachher. Eine Grafik zeigt je Sensor die Abweichung vor und nach der Korrektur. Nach dem Schließen bleibt das Ergebnis über **Ergebnis** in der Auswahl abrufbar. Rückgängig machen lässt sich der letzte Lauf in der Ergebnisansicht.
+## Services and status sensor
 
-## Rückgängig
+`sensor_kalibrierung.start`, `.cancel`, `.dismiss`, `.rollback` and `.restore_offsets`
 
-**Rückgängig** stellt Offsets, Nachkommastellen und Kalibrierdaten von vor dem letzten Lauf wieder her. Ein neuer Start ersetzt diese Sicherung.
+`sensor.sensor_kalibrierung_status` shows the phase, for example for automations. Its attributes contain the last result, missing offsets and new sensors. They are not recorded.
 
-Die Kachel zeigt unter jedem korrigierbaren Sensor, wann er zuletzt kalibriert wurde.
+## Language
 
-## Dienste
+The card follows the language of the Home Assistant user interface (German or English). Notifications and error messages follow the language set in Home Assistant.
 
-`sensor_kalibrierung.start`, `.cancel`, `.dismiss`, `.rollback` und `.restore_offsets`
-
-Der Sensor `sensor.sensor_kalibrierung_status` zeigt die Phase, etwa für Automationen. Seine Attribute enthalten das letzte Ergebnis, fehlende Offsets und neue Sensoren. Sie werden nicht aufgezeichnet.
-
-## Tests
+## Development
 
 ```bash
 pip install pytest-homeassistant-custom-component
 pytest
 ```
 
-## Änderungen
-
-Siehe [CHANGELOG.md](CHANGELOG.md).
-
-## Lizenz
-
-MIT, siehe [LICENSE](LICENSE).
+Changes: [CHANGELOG.md](CHANGELOG.md). License: MIT, see [LICENSE](LICENSE).

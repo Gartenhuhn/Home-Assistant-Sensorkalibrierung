@@ -1,4 +1,24 @@
-# Änderungen
+# Changelog / Änderungen
+
+## 1.1.5
+
+**English**
+
+- Card, notes and notifications in English and German. The card follows the language of the user interface.
+- Unsettled phases are ignored: when airing, cooking or heating changes all sensors at once, those minutes do not count. Measuring or checking is extended once if needed.
+- Results are judged against a tolerance (±0.25 °C, ±1 %, ±0.3 hPa). Sensors outside it are named; the misleading “spread did not get smaller” note is gone.
+- With references, the result shows the largest distance to the reference instead of the spread.
+- Shorter finish message and notification, for example “3 sensors corrected, all within tolerance”.
+- English display name: Zigbee2MQTT Sensor Calibration. README in English and German, with screenshots.
+
+**Deutsch**
+
+- Kachel, Hinweise und Benachrichtigungen auf Deutsch und Englisch. Die Kachel folgt der Sprache der Oberfläche.
+- Unruhige Phasen werden ausgeblendet: Verändern Lüften, Kochen oder Heizung alle Sensoren gleichzeitig, zählen diese Minuten nicht. Messen oder Kontrolle werden bei Bedarf einmal verlängert.
+- Ergebnisse werden an einer Toleranz gemessen (±0,25 °C, ±1 %, ±0,3 hPa). Sensoren außerhalb werden genannt, der irreführende Hinweis „Streuung nicht kleiner geworden“ entfällt.
+- Mit Referenz zeigt das Ergebnis den größten Abstand zur Referenz statt der Streuung.
+- Kürzere Abschlussmeldung und Benachrichtigung, etwa „3 Sensoren korrigiert, alle innerhalb der Toleranz“.
+- README auf Englisch und Deutsch, mit Bildern.
 
 ## 1.1.4
 

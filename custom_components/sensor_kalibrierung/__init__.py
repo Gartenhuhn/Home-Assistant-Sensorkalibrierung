@@ -53,7 +53,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     def manager() -> CalibrationManager:
         if data.manager is None:
-            raise HomeAssistantError("Die Sensor-Kalibrierung ist nicht eingerichtet")
+            raise HomeAssistantError("Sensor calibration is not set up")
         return data.manager
 
     async def start(_call: ServiceCall) -> None:
@@ -82,7 +82,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Richtet Bridge und Manager ein."""
     if not await mqtt.async_wait_for_mqtt_client(hass):
-        raise ConfigEntryNotReady("MQTT ist nicht verfügbar")
+        raise ConfigEntryNotReady("MQTT is not available")
     data: DomainData = hass.data[DOMAIN]
     base_topic = entry.options.get(
         CONF_BASE_TOPIC, entry.data.get(CONF_BASE_TOPIC, DEFAULT_BASE_TOPIC)
